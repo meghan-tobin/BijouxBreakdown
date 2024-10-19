@@ -34,3 +34,12 @@ There will also be grouping functionality for the items. Users can create groups
 Diagram:
 ![title](Diagram.jpg)
 
+Basic back-end capabilties:
+- Supply Configuration
+    - Start with an empty configuration/json
+    - Create json entries from user input
+    - Have save functionaility which will lock the json
+- Item Creation
+    - Automattically grab configuration
+    - Have basic functionaility to add an item based on user input
+    - Result should calulate accurate results (one calc function run multiple times)
