@@ -43,3 +43,8 @@ Basic back-end capabilties:
     - Automattically grab configuration
     - Have basic functionaility to add an item based on user input
     - Result should calulate accurate results (one calc function run multiple times)
+
+
+To run:
+- rustc backend.rs -> creates executable
+- ./backend
