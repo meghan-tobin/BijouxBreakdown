@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BijouxBreakdown</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Georgia', serif;
+  background-color: #faf8f2;
+  background-image:
+    linear-gradient(rgba(150, 180, 220, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150, 180, 220, 0.25) 1px, transparent 1px);
+  background-size: 24px 24px;
+  min-height: 100vh;
+  color: #2d2d2d;
+}
+
+/* ── Header ── */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  background: rgba(250, 248, 242, 0.95);
+  border-bottom: 2px solid #2d2d2d;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+header h1 {
+  font-size: 1.5rem;
+  font-weight: normal;
+  letter-spacing: 3px;
+  font-style: italic;
+  filter: url(#sketchy);
+}
+
+.header-icons { display: flex; gap: 10px; }
+
+.icon-btn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 2px solid #2d2d2d;
+  background: white;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.1s;
+}
+.icon-btn:hover { background: #ede8d8; }
+
+/* ── Main action buttons ── */
+.main-actions {
+  display: flex;
+  gap: 20px;
+  padding: 28px 28px 0;
+}
+
+.action-btn {
+  padding: 10px 22px;
+  border: 2px solid #2d2d2d;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.action-btn:hover { background: #ede8d8; }
+
+/* ── Content area ── */
+.content {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Shared panel styles ── */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.panel-title {
+  font-size: 1.05rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-title .caret { font-family: monospace; font-size: 0.9rem; color: #777; }
+
+.panel-title input {
+  font-size: 1.05rem;
+  font-family: inherit;
+  font-weight: bold;
+  border: none;
+  border-bottom: 1.5px dashed #aaa;
+  background: transparent;
+  padding: 2px 4px;
+  width: 220px;
+}
+.panel-title input:focus { outline: none; border-bottom-color: #555; }
+
+.panel-controls { display: flex; gap: 8px; flex-shrink: 0; }
+
+.btn {
+  padding: 4px 13px;
+  border: 1.5px solid #2d2d2d;
+  background: white;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-family: inherit;
+  transition: background 0.1s;
+}
+.btn:hover { background: #ede8d8; }
+.btn.save { background: #b8ddb8; border-color: #5a9a5a; }
+.btn.save:hover { background: #a0cda0; }
+.btn.danger { border-color: #b03030; color: #b03030; }
+.btn.danger:hover { background: #ffe0e0; }
+.btn.plus { font-size: 1.1rem; padding: 2px 10px; line-height: 1; }
+
+/* ── Configuration panels ── */
+.config-panel {
+  border: 2px solid #d06060;
+  background: rgba(255, 232, 232, 0.45);
+  border-radius: 6px;
+  padding: 16px 18px;
+  position: relative;
+}
+
+.section-content.collapsed { display: none; }
+
+/* ── Supply chips ── */
+.supplies-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 44px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.supply-chip {
+  padding: 8px 13px;
+  border-radius: 5px;
+  color: white;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  position: relative;
+  cursor: default;
+}
+
+.chip-delete {
+  position: absolute;
+  top: -7px; right: -7px;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  background: #333;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+}
+.supply-chip:hover .chip-delete { display: flex; }
+
+/* ── Add supply inline form ── */
+.add-supply-form {
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.75);
+  border: 1.5px dashed #bbb;
+  border-radius: 4px;
+  margin-top: 6px;
+}
+.add-supply-form.visible { display: flex; }
+
+.add-supply-form input,
+.add-supply-form select {
+  padding: 5px 8px;
+  border: 1px solid #bbb;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  background: white;
+}
+.add-supply-form input[name=sname] { width: 140px; }
+.add-supply-form input[name=scost] { width: 72px; }
+.add-supply-form input[name=sqty]  { width: 72px; }
+.add-supply-form select[name=sunit] { width: 80px; }
+
+.form-error { color: #b03030; font-size: 0.8rem; width: 100%; }
+
+/* ── Board ── */
+
+.board-heading {
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 14px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #ddd;
+}
+
+.board {
+  position: relative;
+  width: 100%;
+  min-height: 560px;
+}
+
+.group-container {
+  position: absolute;
+  border: 2px solid #2a9980;
+  background: rgba(195, 235, 228, 0.40);
+  border-radius: 6px;
+  padding: 14px 16px;
+  min-width: 180px;
+  min-height: 80px;
+  overflow: visible;
+}
+
+.group-label {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #2a9980;
+  margin-bottom: 0;
+}
+
+.color-swatch {
+  position: absolute;
+  bottom: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.18);
+  cursor: pointer;
+  z-index: 5;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.color-swatch:hover { transform: scale(1.25); border-color: rgba(0,0,0,0.45); }
+
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+}
+.drag-handle:active { cursor: grabbing; }
+
+/* items inside groups are absolutely positioned within the container */
+
+.item-card {
+  position: absolute;
+  border: 2px solid #5a8ec0;
+  background: white;
+  border-radius: 5px;
+  padding: 10px 14px;
+  min-width: 130px;
+  cursor: grab;
+  transition: box-shadow 0.15s;
+  user-select: none;
+}
+.item-card:hover { box-shadow: 2px 3px 10px rgba(0,0,0,0.12); }
+.item-card.dragging { opacity: 0.75; cursor: grabbing; box-shadow: 4px 6px 16px rgba(0,0,0,0.2); z-index: 10; }
+
+.resize-handle {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 13px;
+  height: 13px;
+  cursor: se-resize;
+  border-radius: 2px;
+  opacity: 0.4;
+  background: repeating-linear-gradient(
+    -45deg, #888 0px, #888 1px, transparent 1px, transparent 3px
+  );
+}
+.resize-handle:hover { opacity: 0.8; }
+
+.group-badge {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  background: #2a9980;
+  color: white;
+  font-size: 0.62rem;
+  padding: 2px 7px;
+  border-radius: 8px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+
+.group-container.drop-target {
+  opacity: 0.75;
+  border-style: dashed !important;
+}
+
+.board-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.board-heading { margin-bottom: 0; }
+
+.card-name { font-weight: bold; font-size: 0.9rem; margin-bottom: 3px; }
+.card-cost { font-size: 1.1rem; color: #2a7a2a; }
+
+.card-detail {
+  display: none;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: #555;
+  border-top: 1px dashed #ccc;
+  padding-top: 8px;
+  line-height: 1.7;
+}
+.card-toolbar {
+  display: none;
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1.5px solid #2d2d2d;
+  border-radius: 20px;
+  padding: 4px 10px;
+  gap: 4px;
+  z-index: 20;
+  box-shadow: 1px 2px 8px rgba(0,0,0,0.13);
+  white-space: nowrap;
+  align-items: center;
+}
+.item-card.expanded .card-toolbar { display: flex; }
+.item-card.expanded .card-detail  { display: block; }
+
+.toolbar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-family: 'Georgia', serif;
+  padding: 3px 8px;
+  border-radius: 10px;
+  line-height: 1;
+  color: #2d2d2d;
+  transition: background 0.1s;
+}
+.toolbar-btn:hover { background: #ede8d8; }
+.toolbar-btn.delete-btn:hover { background: #ffe0e0; }
+
+/* ── Modals ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.38);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: #faf8f2;
+  border: 2px solid #2d2d2d;
+  border-radius: 6px;
+  padding: 26px 28px;
+  width: 90%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal h2 { font-size: 1.1rem; font-weight: normal; font-style: italic; margin-bottom: 18px; }
+
+.field-label {
+  font-size: 0.78rem;
+  color: #666;
+  display: block;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.modal input, .modal select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1.5px solid #bbb;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+  background: white;
+}
+.modal input:focus, .modal select:focus { outline: none; border-color: #5a8ec0; }
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+  border-top: 1px dashed #ddd;
+  padding-top: 14px;
+}
+
+/* ── Item modal supplies list ── */
+.item-supply-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+.item-supply-row .supply-label { flex: 1; }
+.item-supply-row .supply-unit { color: #888; font-size: 0.78rem; min-width: 34px; }
+.item-supply-row input {
+  width: 90px;
+  margin-bottom: 0;
+  padding: 5px 8px;
+}
+
+.cost-preview {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: #2a7a2a;
+  padding: 10px 0 6px;
+  border-top: 1px dashed #ccc;
+  margin-top: 8px;
+}
+
+.no-items-msg { color: #999; font-size: 0.88rem; font-style: italic; padding: 8px 0; }
+
+/* Sketchbook shapes — applied broadly */
+.supply-chip, .item-card, .config-panel, .group-container,
+.action-btn, .btn, .icon-btn, .modal, .add-supply-form { filter: url(#sketchy); }
+</style>
+</head>
+<body>
+
+<!-- SVG filter for hand-drawn wobble effect -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="sketchy" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.06" numOctaves="3" seed="9" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
+<header>
+  <h1>BijouxBreakdown</h1>
+  <div class="header-icons">
+    <button class="icon-btn" id="reset-btn" title="Reset everything">↺</button>
+    <button class="icon-btn" id="help-btn">?</button>
+  </div>
+</header>
+
+<div class="main-actions">
+  <button class="action-btn" id="btn-new-config">+ Configure Supplies</button>
+</div>
+
+<div class="content" id="content"></div>
+
+<!-- Item creation modal -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal">
+    <h2>Add Item</h2>
+    <label class="field-label">Item Name</label>
+    <input id="item-name" type="text" placeholder="e.g. Dinner at Pearls" />
+    <label class="field-label">Configuration</label>
+    <select id="item-config-select">
+      <option value="">-- select a configuration --</option>
+    </select>
+    <div id="item-supplies-list"></div>
+    <div id="item-cost-preview" class="cost-preview" style="display:none"></div>
+    <div id="item-group-row" style="display:none">
+      <label class="field-label">Add to Group (optional)</label>
+      <select id="item-group-select">
+        <option value="">-- none --</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeItemModal()">Cancel</button>
+      <button class="btn save" onclick="saveItem()">Save to Board</button>
+    </div>
+  </div>
+</div>
+
+<!-- Group assignment modal -->
+<div class="modal-overlay" id="group-modal">
+  <div class="modal">
+    <h2>Assign to Group</h2>
+    <div id="group-modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('group-modal')">Cancel</button>
+      <button class="btn save" onclick="saveGroup()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help modal -->
+<div class="modal-overlay" id="help-modal">
+  <div class="modal" style="max-width:420px">
+    <h2>how to use bijoux breakdown</h2>
+    <div style="display:flex;flex-direction:column;gap:14px;font-size:0.9rem;line-height:1.6">
+      <div>
+        <div style="font-weight:bold;margin-bottom:2px">1. + Configure Supplies</div>
+        Create a supply configuration for a type of jewelry (e.g. "Earrings"). Add each material with its name, total cost, quantity, and unit. Hit Save when done.
+      </div>
+      <div>
+        <div style="font-weight:bold;margin-bottom:2px">2. + Add Items</div>
+        Create a specific item (e.g. "Dinner at Pearls"). Select a configuration, enter how much of each supply you use, and your production cost is calculated automatically.
+      </div>
+      <div>
+        <div style="font-weight:bold;margin-bottom:2px">3. Board</div>
+        Saved items appear as cards. Drag them around, resize, and group them into collections. Breaking an item out of a group takes a bit of a pull.
+      </div>
+      <div style="color:#888;font-size:0.8rem">All data is saved in your browser.</div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px">
+      <button class="btn save" onclick="closeModal('help-modal')">got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- New group modal -->
+<div class="modal-overlay" id="new-group-modal">
+  <div class="modal" style="max-width:340px">
+    <h2>new group</h2>
+    <label class="field-label">Group Name</label>
+    <input id="new-group-name" type="text" placeholder="e.g. Fall Collection" />
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('new-group-modal')">Cancel</button>
+      <button class="btn save" onclick="submitNewGroup()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset confirm modal -->
+<div class="modal-overlay" id="reset-modal">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <h2>reset everything?</h2>
+    <p style="font-size:0.9rem;color:#555;margin:12px 0 20px">This will clear all your configurations, items, and board layout. It cannot be undone.</p>
+    <div class="modal-actions" style="justify-content:center">
+      <button class="btn" onclick="closeModal('reset-modal')">never mind</button>
+      <button class="btn save" style="background:#c0392b;border-color:#c0392b;color:#fff" onclick="confirmReset()">yes, reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let S = { configs: [], items: [], groups: [] };
+let _groupTargetItemId = null;
+let _editingItemId = null;
+const _collapsedConfigs = new Set();
+
+function saveState() { localStorage.setItem('bijoux_v1', JSON.stringify(S)); }
+function loadState() {
+  try { const d = localStorage.getItem('bijoux_v1'); if (d) S = JSON.parse(d); } catch(e) {}
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+// ── Unit conversion ───────────────────────────────────────────────────────────
+
+const LENGTH_UNITS = ['yards', 'feet', 'in', 'cms'];
+
+function toInches(amount, unit) {
+  switch (unit) {
+    case 'yards': return amount * 36;
+    case 'feet':  return amount * 12;
+    case 'in':    return amount;
+    case 'cms':   return amount / 2.54;
+    default:      return amount;
+  }
+}
+
+function fromInches(inches, unit) {
+  switch (unit) {
+    case 'yards': return inches / 36;
+    case 'feet':  return inches / 12;
+    case 'in':    return inches;
+    case 'cms':   return inches * 2.54;
+    default:      return inches;
+  }
+}
+
+function convertAmount(amount, fromUnit, toUnit) {
+  if (fromUnit === toUnit) return amount;
+  if (!LENGTH_UNITS.includes(fromUnit) || !LENGTH_UNITS.includes(toUnit)) return amount;
+  return fromInches(toInches(amount, fromUnit), toUnit);
+}
+
+function compatibleUnits(unit) {
+  if (LENGTH_UNITS.includes(unit)) return LENGTH_UNITS;
+  return [unit];
+}
+
+// ── Cost ──────────────────────────────────────────────────────────────────────
+
+function calcCost(item) {
+  const cfg = S.configs.find(c => c.id === item.configId);
+  if (!cfg) return 0;
+  return (item.usages || []).reduce((sum, u) => {
+    const sup = cfg.supplies.find(s => s.id === u.supplyId);
+    if (!sup || !u.amount) return sum;
+    const converted = convertAmount(u.amount, u.unit || sup.unit, sup.unit);
+    return sum + (sup.cost / sup.quantity) * converted;
+  }, 0);
+}
+
+function fmt(n) { return '$' + n.toFixed(2); }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Sketchbook shape helpers ──────────────────────────────────────────────────
+
+function sketchRand(seed, min, max) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
+  return min + ((h >>> 0) / 0xFFFFFFFF) * (max - min);
+}
+
+function sketchRadius(seed) {
+  return [1, 2, 3, 4].map(i => sketchRand(seed + 'br' + i, 3, 18).toFixed(1)).join('px ') + 'px';
+}
+
+function sketchRotation(seed, range) {
+  return sketchRand(seed + 'rot', -range, range).toFixed(2) + 'deg';
+}
+
+function hashColorIdx(seed, len, exclude) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619) >>> 0;
+  // Pick uniformly from (len - 1) valid slots, then map past the excluded index
+  const slots = exclude >= 0 ? len - 1 : len;
+  let idx = h % slots;
+  if (exclude >= 0 && idx >= exclude) idx++;
+  return idx;
+}
+
+// ── Block color palette ───────────────────────────────────────────────────────
+
+const BLOCK_COLORS = [
+  { border: '#c05050', bg: 'rgba(255, 225, 225, 0.45)' },  // red
+  { border: '#2a9980', bg: 'rgba(195, 235, 228, 0.40)' },  // teal
+  { border: '#5a8ec0', bg: 'rgba(210, 228, 248, 0.45)' },  // blue
+  { border: '#e0923a', bg: 'rgba(255, 230, 200, 0.45)' },  // orange
+  { border: '#5aaa6a', bg: 'rgba(210, 240, 215, 0.45)' },  // green
+  { border: '#c05880', bg: 'rgba(245, 210, 225, 0.45)' },  // pink
+  { border: '#9058b8', bg: 'rgba(228, 210, 248, 0.40)' },  // purple
+];
+
+function blockColor(idx, defaultIdx) {
+  return BLOCK_COLORS[(idx ?? defaultIdx) % BLOCK_COLORS.length];
+}
+
+let _lastColorIdx = -1;
+function randomColorIdx() {
+  const options = BLOCK_COLORS.map((_, i) => i).filter(i => i !== _lastColorIdx);
+  const pick = options[Math.floor(Math.random() * options.length)];
+  _lastColorIdx = pick;
+  return pick;
+}
+
+function shuffleConfigColors(id) {
+  const cfg = S.configs.find(c => c.id === id);
+  if (cfg) {
+    const nameEl = document.getElementById('cfg-name-' + id);
+    if (nameEl) cfg.name = nameEl.value;
+    cfg.chipSalt = uid();
+    cfg.colorIdx = randomColorIdx();
+    saveState(); render();
+  }
+}
+
+function cycleConfigColor(id) {
+  const cfg = S.configs.find(c => c.id === id);
+  if (cfg) {
+    const nameEl = document.getElementById('cfg-name-' + id);
+    if (nameEl) cfg.name = nameEl.value;
+    cfg.colorIdx = ((cfg.colorIdx ?? 0) + 1) % BLOCK_COLORS.length;
+    saveState(); render();
+  }
+}
+
+function cycleGroupColor(id) {
+  const grp = S.groups.find(g => g.id === id);
+  if (grp) { grp.colorIdx = ((grp.colorIdx ?? 1) + 1) % BLOCK_COLORS.length; saveState(); render(); }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+const CHIP_COLORS = ['#d9634a','#e0923a','#4a8fc0','#5aaa6a','#9058c0','#c05880'];
+
+function render() {
+  const el = document.getElementById('content');
+  el.innerHTML = '';
+
+  // Configs
+  S.configs.forEach(cfg => el.appendChild(buildConfigPanel(cfg)));
+
+  // Board
+  el.appendChild(buildBoard());
+}
+
+function buildConfigPanel(cfg) {
+  const panel = document.createElement('div');
+  panel.className = 'config-panel' + (cfg.locked ? ' locked' : '');
+  panel.id = 'cfg-' + cfg.id;
+  const col = blockColor(cfg.colorIdx, 0);
+  panel.style.borderColor = col.border;
+  panel.style.background = col.bg;
+
+  // Header
+  const hdr = document.createElement('div');
+  hdr.className = 'panel-header';
+
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'panel-title';
+
+  const caret = document.createElement('span');
+  caret.className = 'caret';
+  caret.textContent = '>';
+  titleWrap.appendChild(caret);
+
+  if (cfg.locked) {
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = cfg.name;
+    titleWrap.appendChild(nameSpan);
+  } else {
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = 'Configuration name...';
+    nameInput.value = cfg.name;
+    nameInput.id = 'cfg-name-' + cfg.id;
+    nameInput.onclick = e => e.stopPropagation();
+    titleWrap.appendChild(nameInput);
+  }
+
+  // Toggle collapse on title click — persisted across re-renders
+  const collapsed = () => _collapsedConfigs.has(cfg.id);
+  if (collapsed()) caret.style.transform = 'rotate(-90deg)';
+  titleWrap.addEventListener('click', () => {
+    if (collapsed()) { _collapsedConfigs.delete(cfg.id); } else { _collapsedConfigs.add(cfg.id); }
+    caret.style.transform = collapsed() ? 'rotate(-90deg)' : '';
+    const sc = panel.querySelector('.section-content');
+    sc.classList.toggle('collapsed', collapsed());
+  });
+
+  const controls = document.createElement('div');
+  controls.className = 'panel-controls';
+
+  if (!cfg.locked) {
+    const shuffleBtn = mkBtn('✦', 'btn', () => shuffleConfigColors(cfg.id));
+    shuffleBtn.style.cssText = 'font-size:0.65rem;padding:2px 7px;';
+    shuffleBtn.title = 'Shuffle colors';
+    const saveBtn = mkBtn('Save', 'btn save', () => saveConfig(cfg.id));
+    const delBtn  = mkBtn('Delete', 'btn danger', () => deleteConfig(cfg.id));
+    controls.append(shuffleBtn, saveBtn, delBtn);
+  } else {
+    const editBtn = mkBtn('Edit', 'btn', () => unlockConfig(cfg.id));
+    const delBtn  = mkBtn('Delete', 'btn danger', () => deleteConfig(cfg.id));
+    controls.append(editBtn, delBtn);
+  }
+
+  hdr.append(titleWrap, controls);
+
+  // Section content
+  const sc = document.createElement('div');
+  sc.className = 'section-content' + (collapsed() ? ' collapsed' : '');
+
+  // Chips
+  const chips = document.createElement('div');
+  chips.className = 'supplies-chips';
+
+  let prevChipColor = -1;
+  cfg.supplies.forEach((sup, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'supply-chip';
+    const chipColorIdx = hashColorIdx(sup.id + (cfg.chipSalt || ''), CHIP_COLORS.length, prevChipColor);
+    prevChipColor = chipColorIdx;
+    chip.style.background = CHIP_COLORS[chipColorIdx];
+    const rot = ((i * 11 + cfg.id.charCodeAt(0)) % 9) - 4;
+    chip.style.transform = `rotate(${rot}deg)`;
+    chip.style.borderRadius = sketchRadius(sup.id);
+    chip.innerHTML = `<strong>${esc(sup.name)}</strong><br>${fmt(sup.cost)} / ${sup.quantity} ${sup.unit}`;
+
+    if (!cfg.locked) {
+      const del = document.createElement('button');
+      del.className = 'chip-delete';
+      del.textContent = '×';
+      del.onclick = e => { e.stopPropagation(); deleteSupply(cfg.id, sup.id); };
+      chip.appendChild(del);
+    }
+    chips.appendChild(chip);
+  });
+
+  if (!cfg.locked) {
+    const addBtn = mkBtn('+', 'btn plus', () => toggleAddSupplyForm(cfg.id));
+    chips.appendChild(addBtn);
+  }
+
+  sc.appendChild(chips);
+
+  // Add supply form
+  if (!cfg.locked) {
+    const form = document.createElement('div');
+    form.className = 'add-supply-form';
+    form.id = 'sup-form-' + cfg.id;
+    form.innerHTML = `
+      <input name="sname" placeholder="Supply name" />
+      <input name="scost" type="number" min="0" step="0.01" placeholder="Cost $" />
+      <input name="sqty"  type="number" min="0.001" step="any" placeholder="Quantity" />
+      <select name="sunit">
+        <option value="yards">yards</option>
+        <option value="feet">feet</option>
+        <option value="in">in</option>
+        <option value="cms">cms</option>
+        <option value="count">count</option>
+        <option value="n/a">n/a</option>
+      </select>
+      <button class="btn save" onclick="submitSupply('${cfg.id}')">Add</button>
+      <button class="btn" onclick="hideSupplyForm('${cfg.id}')">Cancel</button>
+      <span class="form-error" id="sup-err-${cfg.id}"></span>
+    `;
+    sc.appendChild(form);
+  }
+
+  const swatch = document.createElement('div');
+  swatch.className = 'color-swatch';
+  swatch.style.cssText += `background:${col.border};right:14px;`;
+  swatch.title = 'Change color';
+  swatch.addEventListener('mousedown', e => e.stopPropagation());
+  swatch.addEventListener('click', e => { e.stopPropagation(); cycleConfigColor(cfg.id); });
+  panel.append(hdr, sc, swatch);
+  return panel;
+}
+
+function buildBoard() {
+  const section = document.createElement('div');
+  section.className = 'board-section';
+
+  const headingRow = document.createElement('div');
+  headingRow.className = 'board-heading-row';
+  const heading = document.createElement('div');
+  heading.className = 'board-heading';
+  heading.textContent = 'Board';
+  const newItemBtn = mkBtn('+ Add Item', 'btn', openItemModal);
+  newItemBtn.style.cssText = 'font-size:0.78rem;padding:3px 10px;';
+  const newGrpBtn = mkBtn('+ New Group', 'btn', createGroup);
+  newGrpBtn.style.cssText = 'font-size:0.78rem;padding:3px 10px;';
+  headingRow.append(heading, newItemBtn, newGrpBtn);
+  section.appendChild(headingRow);
+
+  if (S.items.length === 0 && S.groups.length === 0) return section;
+
+  const board = document.createElement('div');
+  board.className = 'board';
+
+  // Groups — items live inside as flex children
+  S.groups.forEach(grp => {
+    const gc = document.createElement('div');
+    gc.className = 'group-container';
+    gc.dataset.groupId = grp.id;
+    const gcol = blockColor(grp.colorIdx, 1);
+    gc.style.borderColor = gcol.border;
+    gc.style.background = gcol.bg;
+    gc.style.borderRadius = sketchRadius(grp.id);
+    gc.style.left  = (grp.x || 20) + 'px';
+    gc.style.top   = (grp.y || 20) + 'px';
+    gc.style.width  = (grp.width  || 240) + 'px';
+    gc.style.height = (grp.height || 180) + 'px';
+
+    const labelRow = document.createElement('div');
+    labelRow.className = 'drag-handle';
+    labelRow.style.cssText = 'display:flex;justify-content:space-between;align-items:center;';
+    labelRow.addEventListener('mousedown', e => startMove(e, 'group', grp.id, gc));
+    const label = document.createElement('div');
+    label.className = 'group-label';
+    label.style.color = gcol.border;
+    label.textContent = grp.name;
+    const delBtn = mkBtn('×', 'btn danger', () => deleteGroup(grp.id));
+    delBtn.style.cssText = 'padding:1px 7px;font-size:0.9rem;';
+    delBtn.addEventListener('mousedown', e => e.stopPropagation());
+    labelRow.append(label, delBtn);
+    gc.appendChild(labelRow);
+
+    let mIdx = 0;
+    S.items.filter(i => i.groupId === grp.id).forEach(item => {
+      if (item.rx === undefined) {
+        item.rx = 10 + (mIdx % 2) * 155;
+        item.ry = 44 + Math.floor(mIdx / 2) * 100;
+      }
+      const card = buildItemCard(item);
+      card.style.left = item.rx + 'px';
+      card.style.top  = item.ry + 'px';
+      gc.appendChild(card);
+      mIdx++;
+    });
+
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'resize-handle';
+    resizeHandle.addEventListener('mousedown', e => startResize(e, 'group', grp.id, gc));
+    gc.appendChild(resizeHandle);
+
+    const grpSwatch = document.createElement('div');
+    grpSwatch.className = 'color-swatch';
+    grpSwatch.style.cssText += `background:${gcol.border};left:6px;`;
+    grpSwatch.title = 'Change color';
+    grpSwatch.addEventListener('mousedown', e => e.stopPropagation());
+    grpSwatch.addEventListener('click', e => { e.stopPropagation(); cycleGroupColor(grp.id); });
+    gc.appendChild(grpSwatch);
+
+    board.appendChild(gc);
+  });
+
+  // Ungrouped items only — rendered as absolute on the board
+  let ungroupedIdx = 0;
+  S.items.filter(i => !i.groupId).forEach(item => {
+    const card = buildItemCard(item);
+    card.style.left = (item.x !== undefined ? item.x : 20 + (ungroupedIdx % 5) * 175) + 'px';
+    card.style.top  = (item.y !== undefined ? item.y : 20 + Math.floor(ungroupedIdx / 5) * 155) + 'px';
+    if (item.width)  card.style.width  = item.width  + 'px';
+    if (item.height) card.style.height = item.height + 'px';
+    ungroupedIdx++;
+    board.appendChild(card);
+  });
+
+  section.appendChild(board);
+  return section;
+}
+
+function buildItemCard(item) {
+  const cfg = S.configs.find(c => c.id === item.configId);
+  const cost = calcCost(item);
+
+  const card = document.createElement('div');
+  card.className = 'item-card';
+  card.dataset.itemId = item.id;
+  card.style.borderRadius = sketchRadius(item.id);
+  card.style.transform = `rotate(${sketchRotation(item.id, 2.2)})`;
+  if (item.groupId) {
+    const itemGrp = S.groups.find(g => g.id === item.groupId);
+    if (itemGrp) card.style.borderColor = blockColor(itemGrp.colorIdx, 1).border;
+  }
+
+  const detail = (item.usages || []).map(u => {
+    if (!cfg) return '';
+    const sup = cfg.supplies.find(s => s.id === u.supplyId);
+    if (!sup || !u.amount) return '';
+    const converted = convertAmount(u.amount, u.unit || sup.unit, sup.unit);
+    return `- ${esc(sup.name)}: ${fmt((sup.cost / sup.quantity) * converted)}`;
+  }).filter(Boolean).join('<br>');
+
+  const grp = item.groupId ? S.groups.find(g => g.id === item.groupId) : null;
+  const grpBadgeColor = grp ? blockColor(grp.colorIdx, 1).border : null;
+  card.innerHTML = `
+    <div class="card-toolbar">
+      <button class="toolbar-btn" onclick="event.stopPropagation();openEditItemModal('${item.id}')" title="Edit">~</button>
+      <button class="toolbar-btn delete-btn" onclick="event.stopPropagation();deleteItem('${item.id}')" title="Delete">×</button>
+    </div>
+    ${grp ? `<div class="group-badge" style="background:${grpBadgeColor}">${esc(grp.name)}</div>` : ''}
+    <div class="card-name">${esc(item.name)}</div>
+    <div class="card-cost">${fmt(cost)}</div>
+    <div class="card-detail">${detail || '<em>no supply usage entered</em>'}</div>
+  `;
+
+  card.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button') || e.target.closest('.card-detail') || e.target.closest('.resize-handle')) return;
+    startMove(e, 'item', item.id, card);
+  });
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('button') || e.target.closest('.resize-handle')) return;
+    if (!dragMoved) card.classList.toggle('expanded');
+  });
+
+  const resizeHandle = document.createElement('div');
+  resizeHandle.className = 'resize-handle';
+  resizeHandle.addEventListener('mousedown', e => startResize(e, 'item', item.id, card));
+  card.appendChild(resizeHandle);
+
+  return card;
+}
+
+// ── Free-form drag & resize ───────────────────────────────────────────────────
+
+let activeDrag = null;
+let activeResize = null;
+let dragMoved = false;
+
+const ESCAPE_THRESHOLD = 120;
+const HEADER_H = 40;
+
+function reflowGroupMembers(grp) {
+  const members = S.items.filter(i => i.groupId === grp.id);
+  if (!members.length) return;
+  const pad = 8;
+  // Only reflow if any member overflows the new bounds
+  const overflows = members.some(item => {
+    const card = document.querySelector(`[data-item-id="${item.id}"]`);
+    const cw = card ? card.offsetWidth : 140;
+    const ch = card ? card.offsetHeight : 80;
+    return (item.rx || 0) + cw > grp.width - pad || (item.ry || 0) + ch > grp.height - pad;
+  });
+  if (!overflows) return;
+  // Flow layout — left to right, wrap to next row, no overlap
+  let x = pad, y = HEADER_H + pad, rowH = 0;
+  members.forEach(item => {
+    const card = document.querySelector(`[data-item-id="${item.id}"]`);
+    const cw = card ? card.offsetWidth : 140;
+    const ch = card ? card.offsetHeight : 80;
+    if (x > pad && x + cw > grp.width - pad) { x = pad; y += rowH + pad; rowH = 0; }
+    item.rx = x; item.ry = y;
+    if (card) { card.style.left = x + 'px'; card.style.top = y + 'px'; }
+    x += cw + pad;
+    rowH = Math.max(rowH, ch);
+  });
+}
+
+function startMove(e, type, id, el) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const board = document.querySelector('.board');
+  const boardRect = board.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  dragMoved = false;
+
+  let dragEl = el;
+  let originalEl = null;
+  let itemGroupId = null;
+
+  if (type === 'item') {
+    const item = S.items.find(i => i.id === id);
+    if (item && item.groupId) {
+      // Grouped item: create a ghost on the board to drag, leave original in place
+      itemGroupId = item.groupId;
+      const ghost = el.cloneNode(true);
+      ghost.style.cssText = `position:absolute;left:${elRect.left - boardRect.left}px;top:${elRect.top - boardRect.top}px;width:${el.offsetWidth}px;z-index:20;pointer-events:none;`;
+      board.appendChild(ghost);
+      el.style.opacity = '0.3';
+      originalEl = el;
+      dragEl = ghost;
+    }
+  }
+
+  activeDrag = {
+    type, id,
+    el: dragEl,
+    originalEl,
+    offsetX: e.clientX - elRect.left,
+    offsetY: e.clientY - elRect.top,
+    boardLeft: boardRect.left,
+    boardTop: boardRect.top,
+    startX: elRect.left - boardRect.left,
+    startY: elRect.top  - boardRect.top,
+    itemGroupId
+  };
+  dragEl.classList.add('dragging');
+}
+
+function startResize(e, type, id, el) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  activeResize = {
+    type, id, el,
+    startX: e.clientX, startY: e.clientY,
+    startW: el.offsetWidth, startH: el.offsetHeight
+  };
+}
+
+function getOverlappingGroup(el) {
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top  + r.height / 2;
+  for (const gc of document.querySelectorAll('.group-container')) {
+    const gr = gc.getBoundingClientRect();
+    if (cx >= gr.left && cx <= gr.right && cy >= gr.top && cy <= gr.bottom) {
+      return gc.dataset.groupId;
+    }
+  }
+  return null;
+}
+
+document.addEventListener('mousemove', (e) => {
+  if (activeDrag) {
+    dragMoved = true;
+    const x = Math.max(0, e.clientX - activeDrag.boardLeft - activeDrag.offsetX);
+    const y = Math.max(0, e.clientY - activeDrag.boardTop - activeDrag.offsetY);
+    activeDrag.el.style.left = x + 'px';
+    activeDrag.el.style.top  = y + 'px';
+
+    if (activeDrag.type === 'item') {
+      const hoveredId = getOverlappingGroup(activeDrag.el);
+      document.querySelectorAll('.group-container').forEach(gc => {
+        gc.classList.toggle('drop-target', gc.dataset.groupId === hoveredId);
+      });
+
+      if (activeDrag.itemGroupId) {
+        const dx = x - activeDrag.startX;
+        const dy = y - activeDrag.startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const badge = activeDrag.el.querySelector('.group-badge');
+        if (badge) {
+          if (dist < ESCAPE_THRESHOLD * 0.6) {
+            badge.style.background = '#e08030';
+            badge.textContent = badge.textContent.replace(/ [↩✕]$/, '') + ' ↩';
+          } else {
+            badge.style.background = '#c03030';
+            badge.textContent = badge.textContent.replace(/ [↩✕]$/, '') + ' ✕';
+          }
+        }
+      }
+    }
+  }
+  if (activeResize) {
+    const w = Math.max(150, activeResize.startW + (e.clientX - activeResize.startX));
+    const h = Math.max(80,  activeResize.startH + (e.clientY - activeResize.startY));
+    activeResize.el.style.width  = w + 'px';
+    activeResize.el.style.height = h + 'px';
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (activeDrag) {
+    document.querySelectorAll('.group-container').forEach(gc => gc.classList.remove('drop-target'));
+
+    const x = parseFloat(activeDrag.el.style.left) || 0;
+    const y = parseFloat(activeDrag.el.style.top)  || 0;
+
+    if (dragMoved) {
+      if (activeDrag.type === 'item') {
+        const item = S.items.find(i => i.id === activeDrag.id);
+        if (item) {
+          const overlappingId = getOverlappingGroup(activeDrag.el);
+          const dx = x - activeDrag.startX;
+          const dy = y - activeDrag.startY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (activeDrag.originalEl) {
+            // Ghost drag from a group
+            activeDrag.el.remove();
+            activeDrag.originalEl.style.opacity = '';
+            if (overlappingId === activeDrag.itemGroupId) {
+              const grp = S.groups.find(g => g.id === overlappingId);
+              item.rx = Math.max(4, x - (grp ? grp.x || 0 : 0));
+              item.ry = Math.max(38, y - (grp ? grp.y || 0 : 0));
+            } else if (overlappingId) {
+              const grp = S.groups.find(g => g.id === overlappingId);
+              item.groupId = overlappingId;
+              item.rx = Math.max(4, x - (grp ? grp.x || 0 : 0));
+              item.ry = Math.max(38, y - (grp ? grp.y || 0 : 0));
+            } else if (dist >= ESCAPE_THRESHOLD) {
+              item.groupId = null;
+              item.rx = undefined; item.ry = undefined;
+              item.x = x; item.y = y;
+            } else {
+              activeDrag.el.remove();
+              activeDrag.originalEl.style.opacity = '';
+            }
+          } else {
+            if (overlappingId) {
+              const grp = S.groups.find(g => g.id === overlappingId);
+              item.groupId = overlappingId;
+              item.rx = Math.max(4, x - (grp ? grp.x || 0 : 0));
+              item.ry = Math.max(38, y - (grp ? grp.y || 0 : 0));
+            } else {
+              item.x = x; item.y = y;
+            }
+          }
+        }
+      } else {
+        const grp = S.groups.find(g => g.id === activeDrag.id);
+        if (grp) { grp.x = x; grp.y = y; }
+      }
+      activeDrag.el.classList.remove('dragging');
+      activeDrag = null;
+      saveState();
+      render();
+    } else {
+      // No movement — clean up ghost if any, let click event handle expand toggle
+      if (activeDrag.originalEl) {
+        activeDrag.el.remove();
+        activeDrag.originalEl.style.opacity = '';
+      }
+      activeDrag.el.classList.remove('dragging');
+      activeDrag = null;
+    }
+  }
+  if (activeResize) {
+    const w = parseFloat(activeResize.el.style.width);
+    const h = parseFloat(activeResize.el.style.height);
+    if (activeResize.type === 'group') {
+      const grp = S.groups.find(g => g.id === activeResize.id);
+      if (grp) { grp.width = w; grp.height = h; reflowGroupMembers(grp); }
+    } else {
+      const item = S.items.find(i => i.id === activeResize.id);
+      if (item) { item.width = w; item.height = h; }
+    }
+    activeResize = null;
+    saveState();
+  }
+});
+
+function createGroup() {
+  document.getElementById('new-group-name').value = '';
+  openModal('new-group-modal');
+  setTimeout(() => document.getElementById('new-group-name').focus(), 50);
+}
+
+function submitNewGroup() {
+  const name = document.getElementById('new-group-name').value.trim();
+  if (!name) return;
+  const idx = S.groups.length;
+  S.groups.push({ id: uid(), name, x: 20 + idx * 30, y: 20 + idx * 30, width: 240, height: 180, colorIdx: randomColorIdx() });
+  saveState();
+  closeModal('new-group-modal');
+  render();
+}
+
+function deleteGroup(id) {
+  const grp = S.groups.find(g => g.id === id);
+  S.items.forEach(item => {
+    if (item.groupId === id) {
+      item.groupId = null;
+      // Place freed items near where the group was
+      item.x = (grp ? grp.x || 20 : 20);
+      item.y = (grp ? grp.y || 20 : 20);
+    }
+  });
+  S.groups = S.groups.filter(g => g.id !== id);
+  saveState(); render();
+}
+
+// ── Config actions ────────────────────────────────────────────────────────────
+
+function saveConfig(id) {
+  const cfg = S.configs.find(c => c.id === id);
+  if (!cfg) return;
+  const input = document.getElementById('cfg-name-' + id);
+  if (input) cfg.name = input.value.trim();
+  if (!cfg.name) { alert('Please give the configuration a name.'); return; }
+  cfg.locked = true;
+  saveState(); render();
+}
+
+function unlockConfig(id) {
+  const cfg = S.configs.find(c => c.id === id);
+  if (cfg) { cfg.locked = false; saveState(); render(); }
+}
+
+function deleteConfig(id) {
+  const used = S.items.some(i => i.configId === id);
+  if (used && !confirm('This configuration is used by existing items. Delete anyway?')) return;
+  S.configs = S.configs.filter(c => c.id !== id);
+  saveState(); render();
+}
+
+function toggleAddSupplyForm(configId) {
+  const form = document.getElementById('sup-form-' + configId);
+  if (!form) return;
+  form.classList.toggle('visible');
+  if (form.classList.contains('visible')) {
+    form.querySelector('[name=sname]').focus();
+  }
+}
+
+function hideSupplyForm(configId) {
+  const form = document.getElementById('sup-form-' + configId);
+  if (form) {
+    form.classList.remove('visible');
+    form.querySelectorAll('input').forEach(i => i.value = '');
+    const err = document.getElementById('sup-err-' + configId);
+    if (err) err.textContent = '';
+  }
+}
+
+function submitSupply(configId) {
+  const form = document.getElementById('sup-form-' + configId);
+  const err  = document.getElementById('sup-err-' + configId);
+  const name = form.querySelector('[name=sname]').value.trim();
+  const cost = parseFloat(form.querySelector('[name=scost]').value);
+  const qty  = parseFloat(form.querySelector('[name=sqty]').value);
+  const unit = form.querySelector('[name=sunit]').value;
+
+  if (!name)          { err.textContent = 'Name is required.'; return; }
+  if (isNaN(cost) || cost < 0) { err.textContent = 'Enter a valid cost.'; return; }
+  if (isNaN(qty)  || qty <= 0) { err.textContent = 'Enter a valid quantity.'; return; }
+
+  const cfg = S.configs.find(c => c.id === configId);
+  const nameEl = document.getElementById('cfg-name-' + configId);
+  if (nameEl) cfg.name = nameEl.value;
+  cfg.supplies.push({ id: uid(), name, cost, quantity: qty, unit });
+  saveState(); render();
+}
+
+function deleteSupply(configId, supplyId) {
+  const cfg = S.configs.find(c => c.id === configId);
+  if (cfg) {
+    const nameEl = document.getElementById('cfg-name-' + configId);
+    if (nameEl) cfg.name = nameEl.value;
+    cfg.supplies = cfg.supplies.filter(s => s.id !== supplyId);
+    saveState(); render();
+  }
+}
+
+// ── Item modal ────────────────────────────────────────────────────────────────
+
+function openItemModal() {
+  const locked = S.configs.filter(c => c.locked);
+  if (!locked.length) { alert('Please create and save a configuration first.'); return; }
+
+  const select = document.getElementById('item-config-select');
+  select.innerHTML = '<option value="">-- select a configuration --</option>' +
+    locked.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+
+  document.getElementById('item-name').value = '';
+  document.getElementById('item-supplies-list').innerHTML = '';
+  document.getElementById('item-cost-preview').style.display = 'none';
+
+  const grpRow = document.getElementById('item-group-row');
+  const grpSelect = document.getElementById('item-group-select');
+  if (S.groups.length) {
+    grpSelect.innerHTML = '<option value="">-- none --</option>' +
+      S.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
+    grpRow.style.display = 'block';
+  } else {
+    grpRow.style.display = 'none';
+  }
+
+  openModal('item-modal');
+  setTimeout(() => document.getElementById('item-name').focus(), 50);
+}
+
+function openEditItemModal(itemId) {
+  const item = S.items.find(i => i.id === itemId);
+  if (!item) return;
+  const cfg = S.configs.find(c => c.id === item.configId);
+  if (!cfg) return;
+
+  _editingItemId = itemId;
+  document.querySelector('#item-modal h2').textContent = 'Edit Item';
+
+  const select = document.getElementById('item-config-select');
+  select.innerHTML = `<option value="${cfg.id}">${esc(cfg.name)}</option>`;
+  select.value = cfg.id;
+  select.disabled = true;
+
+  document.getElementById('item-name').value = item.name;
+
+  const listEl = document.getElementById('item-supplies-list');
+  listEl.innerHTML = '';
+  cfg.supplies.forEach(sup => {
+    const usage = (item.usages || []).find(u => u.supplyId === sup.id);
+    const currentAmt = usage ? usage.amount : '';
+    const currentUnit = usage ? (usage.unit || sup.unit) : sup.unit;
+    const units = compatibleUnits(sup.unit);
+    const unitOptions = units.map(u =>
+      `<option value="${u}" ${u === currentUnit ? 'selected' : ''}>${u}</option>`
+    ).join('');
+    const row = document.createElement('div');
+    row.className = 'item-supply-row';
+    row.innerHTML = `
+      <span class="supply-label">${esc(sup.name)}</span>
+      <input type="number" min="0" step="any" placeholder="0"
+        value="${currentAmt}" data-supply-id="${sup.id}" oninput="updateCostPreview()" />
+      <select data-supply-unit-id="${sup.id}" onchange="updateCostPreview()"
+        style="padding:5px 6px;border:1px solid #bbb;border-radius:3px;font-family:inherit;font-size:0.82rem;background:white;">
+        ${unitOptions}
+      </select>
+    `;
+    listEl.appendChild(row);
+  });
+
+  const grpRow = document.getElementById('item-group-row');
+  const grpSelect = document.getElementById('item-group-select');
+  if (S.groups.length) {
+    grpSelect.innerHTML = '<option value="">-- none --</option>' +
+      S.groups.map(g => `<option value="${g.id}" ${item.groupId === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('');
+    grpRow.style.display = 'block';
+  } else {
+    grpRow.style.display = 'none';
+  }
+
+  const previewEl = document.getElementById('item-cost-preview');
+  previewEl.style.display = 'block';
+  updateCostPreview();
+
+  openModal('item-modal');
+  setTimeout(() => document.getElementById('item-name').focus(), 50);
+}
+
+function closeItemModal() {
+  _editingItemId = null;
+  document.querySelector('#item-modal h2').textContent = 'Add Item';
+  document.getElementById('item-config-select').disabled = false;
+  closeModal('item-modal');
+}
+
+document.getElementById('item-config-select').addEventListener('change', function() {
+  const cfg = S.configs.find(c => c.id === this.value);
+  const listEl = document.getElementById('item-supplies-list');
+  const previewEl = document.getElementById('item-cost-preview');
+
+  listEl.innerHTML = '';
+  previewEl.style.display = 'none';
+
+  if (!cfg) return;
+  if (!cfg.supplies.length) {
+    listEl.innerHTML = '<p class="no-items-msg">No supplies in this configuration.</p>';
+    return;
+  }
+
+  cfg.supplies.forEach(sup => {
+    const units = compatibleUnits(sup.unit);
+    const unitOptions = units.map(u =>
+      `<option value="${u}" ${u === sup.unit ? 'selected' : ''}>${u}</option>`
+    ).join('');
+
+    const row = document.createElement('div');
+    row.className = 'item-supply-row';
+    row.innerHTML = `
+      <span class="supply-label">${esc(sup.name)}</span>
+      <input type="number" min="0" step="any" placeholder="0"
+        data-supply-id="${sup.id}" oninput="updateCostPreview()" />
+      <select data-supply-unit-id="${sup.id}" onchange="updateCostPreview()"
+        style="padding:5px 6px;border:1px solid #bbb;border-radius:3px;font-family:inherit;font-size:0.82rem;background:white;">
+        ${unitOptions}
+      </select>
+    `;
+    listEl.appendChild(row);
+  });
+
+  previewEl.style.display = 'block';
+  updateCostPreview();
+});
+
+function updateCostPreview() {
+  const configId = document.getElementById('item-config-select').value;
+  const cfg = S.configs.find(c => c.id === configId);
+  if (!cfg) return;
+
+  let total = 0;
+  document.querySelectorAll('#item-supplies-list [data-supply-id]').forEach(input => {
+    const sup = cfg.supplies.find(s => s.id === input.dataset.supplyId);
+    const amt = parseFloat(input.value) || 0;
+    if (sup && amt > 0) {
+      const unitSel = document.querySelector(`[data-supply-unit-id="${sup.id}"]`);
+      const enteredUnit = unitSel ? unitSel.value : sup.unit;
+      const converted = convertAmount(amt, enteredUnit, sup.unit);
+      total += (sup.cost / sup.quantity) * converted;
+    }
+  });
+
+  const el = document.getElementById('item-cost-preview');
+  el.textContent = 'Total: ' + fmt(total);
+}
+
+function saveItem() {
+  const name = document.getElementById('item-name').value.trim();
+  const configId = document.getElementById('item-config-select').value;
+
+  if (!name)     { alert('Item name is required.'); return; }
+  if (!configId) { alert('Please select a configuration.'); return; }
+
+  const usages = [];
+  document.querySelectorAll('#item-supplies-list [data-supply-id]').forEach(input => {
+    const amt = parseFloat(input.value) || 0;
+    if (amt > 0) {
+      const unitSel = document.querySelector(`[data-supply-unit-id="${input.dataset.supplyId}"]`);
+      usages.push({
+        supplyId: input.dataset.supplyId,
+        amount: amt,
+        unit: unitSel ? unitSel.value : null
+      });
+    }
+  });
+
+  if (_editingItemId) {
+    const item = S.items.find(i => i.id === _editingItemId);
+    if (item) {
+      item.name = name;
+      item.usages = usages;
+      const selectedGroupId = document.getElementById('item-group-select')?.value || null;
+      if ((selectedGroupId || null) !== (item.groupId || null)) {
+        if (selectedGroupId) {
+          const existing = S.items.filter(i => i.groupId === selectedGroupId && i.id !== item.id);
+          item.groupId = selectedGroupId;
+          item.rx = 10 + (existing.length % 2) * 155;
+          item.ry = 44 + Math.floor(existing.length / 2) * 100;
+          item.x = undefined; item.y = undefined;
+        } else {
+          const oldGrp = S.groups.find(g => g.id === item.groupId);
+          item.x = (oldGrp ? oldGrp.x || 20 : 20) + (item.rx || 0);
+          item.y = (oldGrp ? oldGrp.y || 20 : 20) + (item.ry || 0);
+          item.rx = undefined; item.ry = undefined;
+          item.groupId = null;
+        }
+      }
+    }
+    closeItemModal();
+  } else {
+    const selectedGroupId = document.getElementById('item-group-select')?.value || null;
+    const newItem = { id: uid(), name, configId, usages, groupId: selectedGroupId || null };
+    if (selectedGroupId) {
+      const existing = S.items.filter(i => i.groupId === selectedGroupId);
+      newItem.rx = 10 + (existing.length % 2) * 155;
+      newItem.ry = 44 + Math.floor(existing.length / 2) * 100;
+    } else {
+      const idx = S.items.length;
+      newItem.x = 20 + (idx % 5) * 175;
+      newItem.y = 20 + Math.floor(idx / 5) * 155;
+    }
+    S.items.push(newItem);
+    closeItemModal();
+  }
+
+  saveState();
+  render();
+}
+
+// ── Group modal ───────────────────────────────────────────────────────────────
+
+function openGroupModal(itemId) {
+  _groupTargetItemId = itemId;
+  const item = S.items.find(i => i.id === itemId);
+  const body = document.getElementById('group-modal-body');
+
+  let html = '';
+  if (S.groups.length) {
+    html += `<label class="field-label">Existing group</label>
+      <select id="grp-select">
+        <option value="">-- none --</option>
+        ${S.groups.map(g => `<option value="${g.id}" ${item.groupId === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}
+      </select>`;
+  }
+  html += `<label class="field-label">Or create new group</label>
+    <input id="grp-new-name" type="text" placeholder="Group name..." />`;
+
+  body.innerHTML = html;
+  openModal('group-modal');
+  setTimeout(() => {
+    const newNameInput = document.getElementById('grp-new-name');
+    if (newNameInput && !S.groups.length) newNameInput.focus();
+  }, 50);
+}
+
+function saveGroup() {
+  const item = S.items.find(i => i.id === _groupTargetItemId);
+  if (!item) { closeModal('group-modal'); return; }
+
+  const newName = document.getElementById('grp-new-name')?.value.trim();
+  const existingId = document.getElementById('grp-select')?.value;
+
+  if (newName) {
+    const grp = { id: uid(), name: newName, x: 20, y: 20, width: 240, height: 180 };
+    S.groups.push(grp);
+    item.groupId = grp.id;
+    item.rx = 10; item.ry = 44;
+  } else if (existingId) {
+    const grp = S.groups.find(g => g.id === existingId);
+    const existing = S.items.filter(i => i.groupId === existingId);
+    item.groupId = existingId;
+    item.rx = 10 + (existing.length % 2) * 155;
+    item.ry = 44 + Math.floor(existing.length / 2) * 100;
+  } else {
+    // Removing from group — restore to absolute position near the group
+    const oldGrp = S.groups.find(g => g.id === item.groupId);
+    item.x = (oldGrp ? oldGrp.x || 20 : 20) + (item.rx || 0);
+    item.y = (oldGrp ? oldGrp.y || 20 : 20) + (item.ry || 0);
+    item.rx = undefined; item.ry = undefined;
+    item.groupId = null;
+  }
+
+  saveState();
+  closeModal('group-modal');
+  render();
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  document.getElementById(id).addEventListener('click', function handler(e) {
+    if (e.target === this) {
+      if (id === 'item-modal') { closeItemModal(); } else { closeModal(id); }
+      this.removeEventListener('click', handler);
+    }
+  });
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Misc helpers ──────────────────────────────────────────────────────────────
+
+function mkBtn(text, cls, onclick) {
+  const b = document.createElement('button');
+  b.className = cls; b.textContent = text; b.onclick = onclick;
+  return b;
+}
+
+function deleteItem(id) {
+  S.items = S.items.filter(i => i.id !== id);
+  saveState(); render();
+}
+
+// ── Help ──────────────────────────────────────────────────────────────────────
+
+document.getElementById('help-btn').addEventListener('click', () => {
+  document.getElementById('help-modal').classList.add('open');
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('reset-modal').classList.add('open');
+});
+
+function confirmReset() {
+  localStorage.removeItem('bijoux_v1');
+  S = { configs: [], items: [], groups: [] };
+  closeModal('reset-modal');
+  render();
+}
+
+// ── Wire up buttons ───────────────────────────────────────────────────────────
+
+document.getElementById('btn-new-config').addEventListener('click', () => {
+  S.configs.push({ id: uid(), name: '', supplies: [], locked: false, colorIdx: randomColorIdx() });
+  saveState(); render();
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('[id^="cfg-name-"]');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 50);
+});
+
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+loadState();
+render();
+</script>
+</body>
+</html>
