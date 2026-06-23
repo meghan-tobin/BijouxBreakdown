@@ -1,0 +1,12 @@
+{
+    "20 guage gold wire ": {
+        "cost": 10,
+        "quantity": 6,
+        "unit": "yards"
+    },
+    "red beads": {
+        "cost": 25,
+        "quantity": 10,
+        "unit": ""
+    }
+}
