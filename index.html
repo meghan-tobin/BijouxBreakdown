@@ -451,8 +451,108 @@ header h1 {
 
 .no-items-msg { color: #999; font-size: 0.88rem; font-style: italic; padding: 8px 0; }
 
+/* ── Shuffle button at bottom of config panel ── */
+.shuffle-swatch-btn {
+  position: absolute;
+  bottom: 7px;
+  right: 34px;
+  background: none;
+  border: none;
+  font-size: 0.62rem;
+  cursor: pointer;
+  color: #aaa;
+  padding: 2px 3px;
+  line-height: 1;
+  border-radius: 3px;
+}
+.shuffle-swatch-btn:hover { color: #333; background: rgba(0,0,0,0.06); }
+
+/* ── Time cost chips ── */
+.time-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 38px;
+  align-items: flex-start;
+  padding: 6px 0 2px;
+}
+
+.time-chip {
+  padding: 7px 26px 7px 11px;
+  border: 2px solid #5a8ec0;
+  border-radius: 6px;
+  background: rgba(210, 228, 248, 0.45);
+  font-size: 0.82rem;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+  user-select: none;
+  transition: box-shadow 0.12s;
+}
+.time-chip:hover { box-shadow: 1px 2px 8px rgba(0,0,0,0.12); }
+.time-chip.dragging { opacity: 0.4; }
+.tc-chip-name { font-weight: bold; font-size: 0.85rem; }
+.tc-chip-details { color: #555; font-size: 0.77rem; }
+
+/* ── Time section (independent chips) ── */
+.time-section {
+  border: 2px dashed transparent;
+  border-radius: 6px;
+  padding: 6px 10px 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.time-section.drop-target {
+  border-color: #5a8ec0;
+  background: rgba(210, 228, 248, 0.18);
+}
+.time-section-heading {
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+/* ── Item modal time + price ── */
+.modal-divider {
+  border: none;
+  border-top: 1px dashed #ddd;
+  margin: 14px 0 12px;
+}
+.time-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.time-toggle-row input[type=checkbox] { width: auto; margin-bottom: 0; cursor: pointer; }
+.time-toggle-row label { cursor: pointer; font-size: 0.88rem; color: #444; margin-bottom: 0; }
+
+/* ── Card price / profit ── */
+.card-price { font-size: 0.95rem; font-weight: bold; color: #b07000; margin-top: 3px; }
+.card-profit { font-size: 0.78rem; font-weight: normal; margin-left: 4px; }
+.profit-pos { color: #2a7a2a; }
+.profit-neg { color: #b03030; }
+
+/* ── Time chip color dot ── */
+.tc-color-dot {
+  position: absolute;
+  bottom: 5px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.18);
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.tc-color-dot:hover { transform: scale(1.3); border-color: rgba(0,0,0,0.45); }
+
 /* Sketchbook shapes — applied broadly */
-.supply-chip, .item-card, .config-panel, .group-container,
+.supply-chip, .time-chip, .item-card, .config-panel, .group-container,
 .action-btn, .btn, .icon-btn, .modal, .add-supply-form { filter: url(#sketchy); }
 </style>
 </head>
@@ -463,7 +563,7 @@ header h1 {
   <defs>
     <filter id="sketchy" x="-8%" y="-8%" width="116%" height="116%">
       <feTurbulence type="fractalNoise" baseFrequency="0.035 0.06" numOctaves="3" seed="9" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>
 </svg>
@@ -473,11 +573,13 @@ header h1 {
   <div class="header-icons">
     <button class="icon-btn" id="reset-btn" title="Reset everything">↺</button>
     <button class="icon-btn" id="help-btn">?</button>
+    <button class="icon-btn" id="profile-btn" title="Sign in">○</button>
   </div>
 </header>
 
 <div class="main-actions">
   <button class="action-btn" id="btn-new-config">+ Configure Supplies</button>
+  <button class="action-btn" id="btn-add-time">+ Add Time</button>
 </div>
 
 <div class="content" id="content"></div>
@@ -494,6 +596,32 @@ header h1 {
     </select>
     <div id="item-supplies-list"></div>
     <div id="item-cost-preview" class="cost-preview" style="display:none"></div>
+    <hr class="modal-divider">
+    <div class="time-toggle-row">
+      <input type="checkbox" id="item-time-toggle" onchange="toggleItemTimeCost()"/>
+      <label for="item-time-toggle">Include time cost</label>
+    </div>
+    <div id="item-time-row" style="display:none">
+      <label class="field-label">Time Cost</label>
+      <select id="item-time-select" onchange="onTimeCostSelectChange()">
+        <option value="">-- select --</option>
+      </select>
+      <div id="item-time-amount-row" style="display:none;margin-top:10px">
+        <label class="field-label">Time Worked</label>
+        <div style="display:flex;gap:8px">
+          <input id="item-time-amount" type="number" min="0" step="any" placeholder="0" oninput="updateCostPreview()" style="flex:1;margin-bottom:0" />
+          <select id="item-time-unit" onchange="updateCostPreview()" style="width:80px;margin-bottom:0">
+            <option value="mins">mins</option>
+            <option value="hours">hours</option>
+          </select>
+        </div>
+        <div id="item-time-cost-preview" class="cost-preview" style="display:none;font-size:0.9rem;padding:6px 0 0;border:none;margin:0"></div>
+      </div>
+    </div>
+    <div id="item-grand-total" class="cost-preview" style="display:none;margin-top:6px"></div>
+    <hr class="modal-divider">
+    <label class="field-label">Selling Price (optional)</label>
+    <input id="item-price" type="number" min="0" step="0.01" placeholder="e.g. 25.00" />
     <div id="item-group-row" style="display:none">
       <label class="field-label">Add to Group (optional)</label>
       <select id="item-group-select">
@@ -557,6 +685,60 @@ header h1 {
   </div>
 </div>
 
+<!-- Time cost modal -->
+<div class="modal-overlay" id="time-modal">
+  <div class="modal" style="max-width:360px">
+    <h2 id="time-modal-title">Add Time Cost</h2>
+    <label class="field-label">Name</label>
+    <input id="tc-modal-name" type="text" placeholder="e.g. High Effort" />
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">
+        <label class="field-label">Duration</label>
+        <input id="tc-modal-dur" type="number" min="0.1" step="any" placeholder="30" oninput="updateTimeCostModalPreview()" />
+      </div>
+      <div style="width:90px">
+        <label class="field-label">Unit</label>
+        <select id="tc-modal-unit" onchange="updateTimeCostModalPreview()">
+          <option value="mins">mins</option>
+          <option value="hours">hours</option>
+        </select>
+      </div>
+    </div>
+    <label class="field-label">Rate ($/hr)</label>
+    <input id="tc-modal-rate" type="number" min="0" step="0.01" placeholder="15.00" oninput="updateTimeCostModalPreview()" />
+    <div id="tc-modal-preview" class="cost-preview" style="display:none"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('time-modal')">Cancel</button>
+      <button class="btn save" onclick="saveTimeCostModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Auth modal -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal" style="max-width:340px">
+    <h2 id="auth-modal-title">sign in</h2>
+    <div id="auth-logged-in" style="display:none">
+      <p style="font-size:0.9rem;color:#555;margin-bottom:20px">signed in as <strong id="auth-email-display"></strong></p>
+      <div class="modal-actions">
+        <button class="btn danger" onclick="logout()">Sign out</button>
+        <button class="btn save" onclick="closeModal('auth-modal')">close</button>
+      </div>
+    </div>
+    <div id="auth-logged-out">
+      <label class="field-label">Email</label>
+      <input id="auth-email" type="email" placeholder="you@example.com" />
+      <label class="field-label">Password</label>
+      <input id="auth-password" type="password" placeholder="••••••••" />
+      <div id="auth-error" style="color:#b03030;font-size:0.82rem;margin-bottom:10px;display:none"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="submitAuth('register')">Register</button>
+        <button class="btn save" onclick="submitAuth('login')">Sign in</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Reset confirm modal -->
 <div class="modal-overlay" id="reset-modal">
   <div class="modal" style="max-width:360px;text-align:center">
@@ -572,14 +754,49 @@ header h1 {
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let S = { configs: [], items: [], groups: [] };
+let S = { configs: [], items: [], groups: [], timeCosts: [] };
+let authToken = null;
+let authEmail = null;
 let _groupTargetItemId = null;
 let _editingItemId = null;
+let _editingTimeCostId = null;
+let activeChipDrag = null;
+let chipDragMoved = false;
 const _collapsedConfigs = new Set();
 
-function saveState() { localStorage.setItem('bijoux_v1', JSON.stringify(S)); }
-function loadState() {
-  try { const d = localStorage.getItem('bijoux_v1'); if (d) S = JSON.parse(d); } catch(e) {}
+function saveState() {
+  localStorage.setItem('bijoux_v1', JSON.stringify(S));
+  if (authToken) {
+    fetch('/api/state', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify(S)
+    }).catch(() => {});
+  }
+}
+
+async function loadState() {
+  authToken = localStorage.getItem('bijoux_token') || null;
+  authEmail = localStorage.getItem('bijoux_email') || null;
+  if (authToken) {
+    try {
+      const res = await fetch('/api/state', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (res.ok) {
+        S = await res.json();
+        if (!S.timeCosts) S.timeCosts = [];
+        return;
+      }
+      if (res.status === 401) {
+        authToken = null; authEmail = null;
+        localStorage.removeItem('bijoux_token');
+        localStorage.removeItem('bijoux_email');
+      }
+    } catch(e) {}
+  }
+  try {
+    const d = localStorage.getItem('bijoux_v1');
+    if (d) { S = JSON.parse(d); if (!S.timeCosts) S.timeCosts = []; }
+  } catch(e) {}
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -621,15 +838,29 @@ function compatibleUnits(unit) {
 
 // ── Cost ──────────────────────────────────────────────────────────────────────
 
+function calcTimeCost(tc) {
+  if (!tc || !tc.duration || !tc.rate) return 0;
+  const hours = tc.durationUnit === 'hours' ? tc.duration : tc.duration / 60;
+  return hours * tc.rate;
+}
+
 function calcCost(item) {
   const cfg = S.configs.find(c => c.id === item.configId);
-  if (!cfg) return 0;
-  return (item.usages || []).reduce((sum, u) => {
+  const materialCost = cfg ? (item.usages || []).reduce((sum, u) => {
     const sup = cfg.supplies.find(s => s.id === u.supplyId);
     if (!sup || !u.amount) return sum;
     const converted = convertAmount(u.amount, u.unit || sup.unit, sup.unit);
     return sum + (sup.cost / sup.quantity) * converted;
-  }, 0);
+  }, 0) : 0;
+  let timeCost = 0;
+  if (item.timeCostId && item.timeAmount) {
+    const tc = S.timeCosts.find(t => t.id === item.timeCostId);
+    if (tc) {
+      const hours = item.timeUnit === 'hours' ? item.timeAmount : item.timeAmount / 60;
+      timeCost = hours * tc.rate;
+    }
+  }
+  return materialCost + timeCost;
 }
 
 function fmt(n) { return '$' + n.toFixed(2); }
@@ -720,12 +951,92 @@ const CHIP_COLORS = ['#d9634a','#e0923a','#4a8fc0','#5aaa6a','#9058c0','#c05880'
 function render() {
   const el = document.getElementById('content');
   el.innerHTML = '';
-
-  // Configs
   S.configs.forEach(cfg => el.appendChild(buildConfigPanel(cfg)));
-
-  // Board
+  if (S.timeCosts.length) el.appendChild(buildTimeSection());
   el.appendChild(buildBoard());
+}
+
+function buildTimeSection() {
+  const section = document.createElement('div');
+  section.className = 'time-section';
+  section.dataset.dropZone = 'independent';
+
+  const heading = document.createElement('div');
+  heading.className = 'time-section-heading';
+  heading.textContent = 'Time Costs';
+  section.appendChild(heading);
+
+  const row = document.createElement('div');
+  row.className = 'time-chips-row';
+  const independent = S.timeCosts.filter(tc => !tc.configId);
+  independent.forEach(tc => row.appendChild(buildTimeChip(tc)));
+  if (!independent.length) {
+    const hint = document.createElement('span');
+    hint.className = 'no-items-msg';
+    hint.textContent = 'drag here to make independent';
+    row.appendChild(hint);
+  }
+  section.appendChild(row);
+  return section;
+}
+
+function buildTimeChip(tc) {
+  const chip = document.createElement('div');
+  chip.className = 'time-chip';
+  chip.dataset.tcId = tc.id;
+  const col = blockColor(tc.colorIdx ?? 2, 2);
+  chip.style.borderColor = col.border;
+  chip.style.background = col.bg;
+  chip.style.borderRadius = sketchRadius(tc.id);
+
+  const durStr = tc.durationUnit === 'hours' ? `${tc.duration} hr` : `${tc.duration} min`;
+  chip.innerHTML = `
+    <div class="tc-chip-name">${esc(tc.name)}</div>
+    <div class="tc-chip-details">${durStr} · ${fmt(calcTimeCost(tc))}</div>
+  `;
+
+  const del = document.createElement('button');
+  del.className = 'chip-delete';
+  del.textContent = '×';
+  del.onclick = e => { e.stopPropagation(); deleteTimeCost(tc.id); };
+  chip.appendChild(del);
+
+  const dot = document.createElement('div');
+  dot.className = 'tc-color-dot';
+  dot.style.background = col.border;
+  dot.title = 'Change color';
+  dot.addEventListener('mousedown', e => e.stopPropagation());
+  dot.addEventListener('click', e => { e.stopPropagation(); cycleTimeCostColor(tc.id); });
+  chip.appendChild(dot);
+
+  chip.addEventListener('click', e => {
+    if (e.target.closest('.chip-delete') || e.target.closest('.tc-color-dot') || chipDragMoved) return;
+    openEditTimeCostModal(tc.id);
+  });
+  chip.addEventListener('mousedown', e => {
+    if (e.target.closest('.chip-delete') || e.target.closest('.tc-color-dot')) return;
+    startChipDrag(e, tc.id, chip);
+  });
+
+  return chip;
+}
+
+function cycleTimeCostColor(id) {
+  const tc = S.timeCosts.find(t => t.id === id);
+  if (tc) { tc.colorIdx = ((tc.colorIdx ?? 2) + 1) % BLOCK_COLORS.length; saveState(); render(); }
+}
+
+function startChipDrag(e, tcId, el) {
+  if (e.button !== 0) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const rect = el.getBoundingClientRect();
+  const ghost = el.cloneNode(true);
+  ghost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;z-index:1000;pointer-events:none;opacity:0.85;`;
+  document.body.appendChild(ghost);
+  el.classList.add('dragging');
+  chipDragMoved = false;
+  activeChipDrag = { tcId, el, ghost, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
 }
 
 function buildConfigPanel(cfg) {
@@ -776,12 +1087,9 @@ function buildConfigPanel(cfg) {
   controls.className = 'panel-controls';
 
   if (!cfg.locked) {
-    const shuffleBtn = mkBtn('✦', 'btn', () => shuffleConfigColors(cfg.id));
-    shuffleBtn.style.cssText = 'font-size:0.65rem;padding:2px 7px;';
-    shuffleBtn.title = 'Shuffle colors';
     const saveBtn = mkBtn('Save', 'btn save', () => saveConfig(cfg.id));
     const delBtn  = mkBtn('Delete', 'btn danger', () => deleteConfig(cfg.id));
-    controls.append(shuffleBtn, saveBtn, delBtn);
+    controls.append(saveBtn, delBtn);
   } else {
     const editBtn = mkBtn('Edit', 'btn', () => unlockConfig(cfg.id));
     const delBtn  = mkBtn('Delete', 'btn danger', () => deleteConfig(cfg.id));
@@ -827,6 +1135,16 @@ function buildConfigPanel(cfg) {
 
   sc.appendChild(chips);
 
+  // Time chips associated with this config
+  const assocTCs = S.timeCosts.filter(tc => tc.configId === cfg.id);
+  if (assocTCs.length) {
+    const tcRow = document.createElement('div');
+    tcRow.className = 'time-chips-row';
+    tcRow.style.cssText = 'margin-top:10px;padding-top:8px;border-top:1px dashed rgba(0,0,0,0.12)';
+    assocTCs.forEach(tc => tcRow.appendChild(buildTimeChip(tc)));
+    sc.appendChild(tcRow);
+  }
+
   // Add supply form
   if (!cfg.locked) {
     const form = document.createElement('div');
@@ -857,7 +1175,15 @@ function buildConfigPanel(cfg) {
   swatch.title = 'Change color';
   swatch.addEventListener('mousedown', e => e.stopPropagation());
   swatch.addEventListener('click', e => { e.stopPropagation(); cycleConfigColor(cfg.id); });
-  panel.append(hdr, sc, swatch);
+
+  const shuffleBtn = document.createElement('button');
+  shuffleBtn.className = 'shuffle-swatch-btn';
+  shuffleBtn.textContent = '✦';
+  shuffleBtn.title = 'Shuffle colors';
+  shuffleBtn.addEventListener('mousedown', e => e.stopPropagation());
+  shuffleBtn.addEventListener('click', e => { e.stopPropagation(); shuffleConfigColors(cfg.id); });
+
+  panel.append(hdr, sc, swatch, shuffleBtn);
   return panel;
 }
 
@@ -969,13 +1295,27 @@ function buildItemCard(item) {
     if (itemGrp) card.style.borderColor = blockColor(itemGrp.colorIdx, 1).border;
   }
 
-  const detail = (item.usages || []).map(u => {
+  const materialLines = (item.usages || []).map(u => {
     if (!cfg) return '';
     const sup = cfg.supplies.find(s => s.id === u.supplyId);
     if (!sup || !u.amount) return '';
     const converted = convertAmount(u.amount, u.unit || sup.unit, sup.unit);
     return `- ${esc(sup.name)}: ${fmt((sup.cost / sup.quantity) * converted)}`;
-  }).filter(Boolean).join('<br>');
+  }).filter(Boolean);
+
+  const tc = item.timeCostId ? S.timeCosts.find(t => t.id === item.timeCostId) : null;
+  if (tc && item.timeAmount) {
+    const hours = item.timeUnit === 'hours' ? item.timeAmount : item.timeAmount / 60;
+    const tcCost = hours * tc.rate;
+    const durStr = item.timeUnit === 'hours' ? `${item.timeAmount} hr` : `${item.timeAmount} min`;
+    materialLines.push(`- Time (${esc(tc.name)}, ${durStr}): ${fmt(tcCost)}`);
+  }
+
+  const detail = materialLines.join('<br>');
+
+  const priceHtml = item.price
+    ? `<div class="card-price">${fmt(item.price)} <span class="card-profit ${item.price - cost >= 0 ? 'profit-pos' : 'profit-neg'}">(${item.price - cost >= 0 ? '+' : ''}${fmt(item.price - cost)})</span></div>`
+    : '';
 
   const grp = item.groupId ? S.groups.find(g => g.id === item.groupId) : null;
   const grpBadgeColor = grp ? blockColor(grp.colorIdx, 1).border : null;
@@ -987,6 +1327,7 @@ function buildItemCard(item) {
     ${grp ? `<div class="group-badge" style="background:${grpBadgeColor}">${esc(grp.name)}</div>` : ''}
     <div class="card-name">${esc(item.name)}</div>
     <div class="card-cost">${fmt(cost)}</div>
+    ${priceHtml}
     <div class="card-detail">${detail || '<em>no supply usage entered</em>'}</div>
   `;
 
@@ -1109,6 +1450,20 @@ function getOverlappingGroup(el) {
 }
 
 document.addEventListener('mousemove', (e) => {
+  if (activeChipDrag) {
+    chipDragMoved = true;
+    activeChipDrag.ghost.style.left = (e.clientX - activeChipDrag.offsetX) + 'px';
+    activeChipDrag.ghost.style.top  = (e.clientY - activeChipDrag.offsetY) + 'px';
+    document.querySelectorAll('.config-panel').forEach(panel => {
+      const r = panel.getBoundingClientRect();
+      panel.classList.toggle('drop-target', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
+    });
+    const tsEl = document.querySelector('.time-section');
+    if (tsEl) {
+      const r = tsEl.getBoundingClientRect();
+      tsEl.classList.toggle('drop-target', e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
+    }
+  }
   if (activeDrag) {
     dragMoved = true;
     const x = Math.max(0, e.clientX - activeDrag.boardLeft - activeDrag.offsetX);
@@ -1147,7 +1502,29 @@ document.addEventListener('mousemove', (e) => {
   }
 });
 
-document.addEventListener('mouseup', () => {
+document.addEventListener('mouseup', (e) => {
+  if (activeChipDrag) {
+    activeChipDrag.ghost.remove();
+    activeChipDrag.el.classList.remove('dragging');
+    document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('drop-target'));
+    const tsEl = document.querySelector('.time-section');
+    if (tsEl) tsEl.classList.remove('drop-target');
+
+    if (chipDragMoved) {
+      let droppedConfigId = null;
+      document.querySelectorAll('.config-panel').forEach(panel => {
+        const r = panel.getBoundingClientRect();
+        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
+          droppedConfigId = panel.id.replace('cfg-', '');
+        }
+      });
+      const tc = S.timeCosts.find(t => t.id === activeChipDrag.tcId);
+      if (tc) tc.configId = droppedConfigId;
+      saveState(); render();
+    }
+    activeChipDrag = null;
+    return;
+  }
   if (activeDrag) {
     document.querySelectorAll('.group-container').forEach(gc => gc.classList.remove('drop-target'));
 
@@ -1343,6 +1720,15 @@ function openItemModal() {
   document.getElementById('item-name').value = '';
   document.getElementById('item-supplies-list').innerHTML = '';
   document.getElementById('item-cost-preview').style.display = 'none';
+  document.getElementById('item-time-toggle').checked = false;
+  document.getElementById('item-time-row').style.display = 'none';
+  document.getElementById('item-time-amount-row').style.display = 'none';
+  document.getElementById('item-time-select').innerHTML = '<option value="">-- select --</option>';
+  document.getElementById('item-time-amount').value = '';
+  document.getElementById('item-time-unit').value = 'mins';
+  document.getElementById('item-time-cost-preview').style.display = 'none';
+  document.getElementById('item-grand-total').style.display = 'none';
+  document.getElementById('item-price').value = '';
 
   const grpRow = document.getElementById('item-group-row');
   const grpSelect = document.getElementById('item-group-select');
@@ -1408,6 +1794,18 @@ function openEditItemModal(itemId) {
     grpRow.style.display = 'none';
   }
 
+  const allTCs = S.timeCosts;
+  const timeSel = document.getElementById('item-time-select');
+  timeSel.innerHTML = '<option value="">-- select --</option>' +
+    allTCs.map(tc => `<option value="${tc.id}" ${item.timeCostId === tc.id ? 'selected' : ''}>${esc(tc.name)} (${fmt(calcTimeCost(tc))})</option>`).join('');
+  const timeToggle = document.getElementById('item-time-toggle');
+  timeToggle.checked = !!item.timeCostId;
+  document.getElementById('item-time-row').style.display = item.timeCostId ? 'block' : 'none';
+  document.getElementById('item-time-amount-row').style.display = item.timeCostId ? 'block' : 'none';
+  document.getElementById('item-time-amount').value = item.timeAmount || '';
+  document.getElementById('item-time-unit').value = item.timeUnit || 'mins';
+  document.getElementById('item-price').value = item.price || '';
+
   const previewEl = document.getElementById('item-cost-preview');
   previewEl.style.display = 'block';
   updateCostPreview();
@@ -1458,15 +1856,64 @@ document.getElementById('item-config-select').addEventListener('change', functio
   });
 
   previewEl.style.display = 'block';
+
+  const relevantTCs = S.timeCosts.filter(tc => !tc.configId || tc.configId === this.value);
+  const timeSel = document.getElementById('item-time-select');
+  timeSel.innerHTML = '<option value="">-- select --</option>' +
+    relevantTCs.map(tc => `<option value="${tc.id}">${esc(tc.name)} (${fmt(calcTimeCost(tc))})</option>`).join('');
+
+  // Auto-check time cost if one is associated with this config
+  const assocTC = S.timeCosts.find(tc => tc.configId === this.value);
+  const toggle = document.getElementById('item-time-toggle');
+  const timeRow = document.getElementById('item-time-row');
+  const amtRow = document.getElementById('item-time-amount-row');
+  if (assocTC) {
+    toggle.checked = true;
+    timeSel.value = assocTC.id;
+    timeRow.style.display = 'block';
+    amtRow.style.display = 'block';
+    if (!document.getElementById('item-time-amount').value) {
+      document.getElementById('item-time-amount').value = assocTC.duration;
+      document.getElementById('item-time-unit').value = assocTC.durationUnit;
+    }
+  } else {
+    toggle.checked = false;
+    timeRow.style.display = 'none';
+    amtRow.style.display = 'none';
+  }
+
   updateCostPreview();
 });
+
+function toggleItemTimeCost() {
+  const checked = document.getElementById('item-time-toggle').checked;
+  document.getElementById('item-time-row').style.display = checked ? 'block' : 'none';
+  if (!checked) document.getElementById('item-time-amount-row').style.display = 'none';
+  updateCostPreview();
+}
+
+function onTimeCostSelectChange() {
+  const tcId = document.getElementById('item-time-select').value;
+  const amtRow = document.getElementById('item-time-amount-row');
+  if (tcId) {
+    amtRow.style.display = 'block';
+    const tc = S.timeCosts.find(t => t.id === tcId);
+    if (tc && !document.getElementById('item-time-amount').value) {
+      document.getElementById('item-time-amount').value = tc.duration;
+      document.getElementById('item-time-unit').value = tc.durationUnit;
+    }
+  } else {
+    amtRow.style.display = 'none';
+  }
+  updateCostPreview();
+}
 
 function updateCostPreview() {
   const configId = document.getElementById('item-config-select').value;
   const cfg = S.configs.find(c => c.id === configId);
   if (!cfg) return;
 
-  let total = 0;
+  let materialTotal = 0;
   document.querySelectorAll('#item-supplies-list [data-supply-id]').forEach(input => {
     const sup = cfg.supplies.find(s => s.id === input.dataset.supplyId);
     const amt = parseFloat(input.value) || 0;
@@ -1474,12 +1921,33 @@ function updateCostPreview() {
       const unitSel = document.querySelector(`[data-supply-unit-id="${sup.id}"]`);
       const enteredUnit = unitSel ? unitSel.value : sup.unit;
       const converted = convertAmount(amt, enteredUnit, sup.unit);
-      total += (sup.cost / sup.quantity) * converted;
+      materialTotal += (sup.cost / sup.quantity) * converted;
     }
   });
 
-  const el = document.getElementById('item-cost-preview');
-  el.textContent = 'Total: ' + fmt(total);
+  const materialsEl = document.getElementById('item-cost-preview');
+  materialsEl.textContent = 'Materials: ' + fmt(materialTotal);
+  materialsEl.style.display = 'block';
+
+  let timeCost = 0;
+  const timeToggle = document.getElementById('item-time-toggle');
+  const timeCostEl = document.getElementById('item-time-cost-preview');
+  const grandTotalEl = document.getElementById('item-grand-total');
+
+  if (timeToggle && timeToggle.checked) {
+    const tcId = document.getElementById('item-time-select')?.value;
+    const amt  = parseFloat(document.getElementById('item-time-amount')?.value) || 0;
+    const unit = document.getElementById('item-time-unit')?.value || 'mins';
+    if (tcId && amt) {
+      const tc = S.timeCosts.find(t => t.id === tcId);
+      if (tc) { const hours = unit === 'hours' ? amt : amt / 60; timeCost = hours * tc.rate; }
+    }
+    if (timeCostEl) { timeCostEl.textContent = 'Time: ' + fmt(timeCost); timeCostEl.style.display = 'block'; }
+    if (grandTotalEl) { grandTotalEl.textContent = 'Total: ' + fmt(materialTotal + timeCost); grandTotalEl.style.display = 'block'; }
+  } else {
+    if (timeCostEl) timeCostEl.style.display = 'none';
+    if (grandTotalEl) grandTotalEl.style.display = 'none';
+  }
 }
 
 function saveItem() {
@@ -1502,11 +1970,22 @@ function saveItem() {
     }
   });
 
+  const timeToggle = document.getElementById('item-time-toggle');
+  const timeSel = document.getElementById('item-time-select');
+  const timeCostId  = (timeToggle && timeToggle.checked && timeSel && timeSel.value) ? timeSel.value : null;
+  const timeAmount  = timeCostId ? (parseFloat(document.getElementById('item-time-amount')?.value) || null) : null;
+  const timeUnit    = timeCostId ? (document.getElementById('item-time-unit')?.value || 'mins') : null;
+  const price = parseFloat(document.getElementById('item-price')?.value) || null;
+
   if (_editingItemId) {
     const item = S.items.find(i => i.id === _editingItemId);
     if (item) {
       item.name = name;
       item.usages = usages;
+      item.timeCostId = timeCostId;
+      item.timeAmount = timeAmount;
+      item.timeUnit   = timeUnit;
+      item.price = price;
       const selectedGroupId = document.getElementById('item-group-select')?.value || null;
       if ((selectedGroupId || null) !== (item.groupId || null)) {
         if (selectedGroupId) {
@@ -1527,7 +2006,7 @@ function saveItem() {
     closeItemModal();
   } else {
     const selectedGroupId = document.getElementById('item-group-select')?.value || null;
-    const newItem = { id: uid(), name, configId, usages, groupId: selectedGroupId || null };
+    const newItem = { id: uid(), name, configId, usages, timeCostId, timeAmount, timeUnit, price, groupId: selectedGroupId || null };
     if (selectedGroupId) {
       const existing = S.items.filter(i => i.groupId === selectedGroupId);
       newItem.rx = 10 + (existing.length % 2) * 155;
@@ -1544,6 +2023,71 @@ function saveItem() {
   saveState();
   render();
 }
+
+// ── Time cost modal ───────────────────────────────────────────────────────────
+
+function openTimeCostModal() {
+  _editingTimeCostId = null;
+  document.getElementById('time-modal-title').textContent = 'Add Time Cost';
+  document.getElementById('tc-modal-name').value = '';
+  document.getElementById('tc-modal-dur').value = '';
+  document.getElementById('tc-modal-unit').value = 'mins';
+  document.getElementById('tc-modal-rate').value = '';
+  document.getElementById('tc-modal-preview').style.display = 'none';
+  openModal('time-modal');
+  setTimeout(() => document.getElementById('tc-modal-name').focus(), 50);
+}
+
+function openEditTimeCostModal(id) {
+  const tc = S.timeCosts.find(t => t.id === id);
+  if (!tc) return;
+  _editingTimeCostId = id;
+  document.getElementById('time-modal-title').textContent = 'Edit Time Cost';
+  document.getElementById('tc-modal-name').value = tc.name;
+  document.getElementById('tc-modal-dur').value = tc.duration || '';
+  document.getElementById('tc-modal-unit').value = tc.durationUnit || 'mins';
+  document.getElementById('tc-modal-rate').value = tc.rate || '';
+  updateTimeCostModalPreview();
+  openModal('time-modal');
+  setTimeout(() => document.getElementById('tc-modal-name').focus(), 50);
+}
+
+function updateTimeCostModalPreview() {
+  const dur  = parseFloat(document.getElementById('tc-modal-dur').value) || 0;
+  const unit = document.getElementById('tc-modal-unit').value;
+  const rate = parseFloat(document.getElementById('tc-modal-rate').value) || 0;
+  const hours = unit === 'hours' ? dur : dur / 60;
+  const el = document.getElementById('tc-modal-preview');
+  if (dur && rate) { el.textContent = fmt(hours * rate); el.style.display = 'block'; }
+  else { el.style.display = 'none'; }
+}
+
+function saveTimeCostModal() {
+  const name     = document.getElementById('tc-modal-name').value.trim();
+  const duration = parseFloat(document.getElementById('tc-modal-dur').value);
+  const unit     = document.getElementById('tc-modal-unit').value;
+  const rate     = parseFloat(document.getElementById('tc-modal-rate').value);
+
+  if (!name)                          { alert('Name is required.'); return; }
+  if (isNaN(duration) || duration <= 0) { alert('Enter a valid duration.'); return; }
+  if (isNaN(rate) || rate < 0)        { alert('Enter a valid rate.'); return; }
+
+  if (_editingTimeCostId) {
+    const tc = S.timeCosts.find(t => t.id === _editingTimeCostId);
+    if (tc) Object.assign(tc, { name, duration, durationUnit: unit, rate });
+  } else {
+    S.timeCosts.push({ id: uid(), name, duration, durationUnit: unit, rate, configId: null, colorIdx: randomColorIdx() });
+  }
+  _editingTimeCostId = null;
+  saveState(); closeModal('time-modal'); render();
+}
+
+function deleteTimeCost(id) {
+  S.items.forEach(item => { if (item.timeCostId === id) item.timeCostId = null; });
+  S.timeCosts = S.timeCosts.filter(t => t.id !== id);
+  saveState(); render();
+}
+
 
 // ── Group modal ───────────────────────────────────────────────────────────────
 
@@ -1641,7 +2185,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 
 function confirmReset() {
   localStorage.removeItem('bijoux_v1');
-  S = { configs: [], items: [], groups: [] };
+  S = { configs: [], items: [], groups: [], timeCosts: [] };
   closeModal('reset-modal');
   render();
 }
@@ -1657,11 +2201,104 @@ document.getElementById('btn-new-config').addEventListener('click', () => {
   }, 50);
 });
 
+document.getElementById('btn-add-time').addEventListener('click', openTimeCostModal);
+
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+function updateProfileBtn() {
+  const btn = document.getElementById('profile-btn');
+  if (authToken) {
+    btn.textContent = '●';
+    btn.title = authEmail || 'Account';
+    btn.style.background = '#b8ddb8';
+    btn.style.borderColor = '#5a9a5a';
+  } else {
+    btn.textContent = '○';
+    btn.title = 'Sign in';
+    btn.style.background = '';
+    btn.style.borderColor = '';
+  }
+}
+
+function openAuthModal() {
+  if (authToken) {
+    document.getElementById('auth-modal-title').textContent = 'account';
+    document.getElementById('auth-email-display').textContent = authEmail || '';
+    document.getElementById('auth-logged-in').style.display = 'block';
+    document.getElementById('auth-logged-out').style.display = 'none';
+  } else {
+    document.getElementById('auth-modal-title').textContent = 'sign in';
+    document.getElementById('auth-logged-in').style.display = 'none';
+    document.getElementById('auth-logged-out').style.display = 'block';
+    document.getElementById('auth-error').style.display = 'none';
+    document.getElementById('auth-email').value = '';
+    document.getElementById('auth-password').value = '';
+  }
+  openModal('auth-modal');
+  if (!authToken) setTimeout(() => document.getElementById('auth-email').focus(), 50);
+}
+
+async function submitAuth(mode) {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl    = document.getElementById('auth-error');
+
+  if (!email || !password) {
+    errEl.textContent = 'Email and password are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/' + mode, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Something went wrong.'; errEl.style.display = 'block'; return; }
+
+    authToken = data.token;
+    authEmail = email;
+    localStorage.setItem('bijoux_token', authToken);
+    localStorage.setItem('bijoux_email', authEmail);
+
+    if (mode === 'login') {
+      const stateRes = await fetch('/api/state', { headers: { 'Authorization': 'Bearer ' + authToken } });
+      if (stateRes.ok) {
+        const cloud = await stateRes.json();
+        const hasData = cloud.configs?.length || cloud.items?.length || cloud.timeCosts?.length;
+        if (hasData) { S = cloud; if (!S.timeCosts) S.timeCosts = []; }
+      }
+    }
+    saveState();
+    updateProfileBtn();
+    closeModal('auth-modal');
+    render();
+  } catch(e) {
+    errEl.textContent = 'Network error — is the Rust backend running?';
+    errEl.style.display = 'block';
+  }
+}
+
+function logout() {
+  authToken = null; authEmail = null;
+  localStorage.removeItem('bijoux_token');
+  localStorage.removeItem('bijoux_email');
+  updateProfileBtn();
+  closeModal('auth-modal');
+}
+
+document.getElementById('profile-btn').addEventListener('click', openAuthModal);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-loadState();
-render();
+(async () => {
+  await loadState();
+  updateProfileBtn();
+  render();
+})();
 </script>
 </body>
 </html>
