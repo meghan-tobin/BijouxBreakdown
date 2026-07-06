@@ -571,15 +571,15 @@ header h1 {
 <header>
   <h1>BijouxBreakdown</h1>
   <div class="header-icons">
-    <button class="icon-btn" id="reset-btn" title="Reset everything">↺</button>
-    <button class="icon-btn" id="help-btn">?</button>
+    <button class="icon-btn" id="reset-btn" title="reset page">↺</button>
+    <button class="icon-btn" id="help-btn" title="about">?</button>
     <button class="icon-btn" id="profile-btn" title="Sign in">○</button>
   </div>
 </header>
 
 <div class="main-actions">
   <button class="action-btn" id="btn-new-config">+ Configure Supplies</button>
-  <button class="action-btn" id="btn-add-time">+ Add Time</button>
+  <button class="action-btn" id="btn-add-time" style="border-radius: 999px;">+ Add Time</button>
 </div>
 
 <div class="content" id="content"></div>
@@ -764,15 +764,40 @@ let activeChipDrag = null;
 let chipDragMoved = false;
 const _collapsedConfigs = new Set();
 
-function saveState() {
+// Write current state to localStorage
+function syncLocal() {
   localStorage.setItem('bijoux_v1', JSON.stringify(S));
-  if (authToken) {
-    fetch('/api/state', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
-      body: JSON.stringify(S)
-    }).catch(() => {});
-  }
+}
+
+// Fire-and-forget API call (no-op when logged out)
+function api(method, path, body) {
+  if (!authToken) return;
+  fetch('/api' + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+    body: body !== undefined ? JSON.stringify(body) : undefined
+  }).catch(() => {});
+}
+
+function configBody(cfg) {
+  return { name: cfg.name, locked: cfg.locked, colorIdx: cfg.colorIdx ?? null, chipSalt: cfg.chipSalt ?? null };
+}
+
+function groupBody(grp) {
+  return { name: grp.name, x: grp.x, y: grp.y, width: grp.width, height: grp.height, colorIdx: grp.colorIdx ?? null };
+}
+
+function itemPosBody(item) {
+  return {
+    x: item.x ?? null, y: item.y ?? null,
+    groupId: item.groupId ?? null,
+    rx: item.rx ?? null, ry: item.ry ?? null,
+    width: item.width ?? null, height: item.height ?? null
+  };
+}
+
+function timeCostBody(tc) {
+  return { name: tc.name, duration: tc.duration, durationUnit: tc.durationUnit, rate: tc.rate, colorIdx: tc.colorIdx ?? null, configId: tc.configId ?? null };
 }
 
 async function loadState() {
@@ -782,11 +807,12 @@ async function loadState() {
     try {
       const res = await fetch('/api/state', { headers: { 'Authorization': 'Bearer ' + authToken } });
       if (res.ok) {
-        S = await res.json();
-        if (!S.timeCosts) S.timeCosts = [];
-        return;
-      }
-      if (res.status === 401) {
+        const cloud = await res.json();
+        if (!cloud.timeCosts) cloud.timeCosts = [];
+        const hasData = cloud.configs?.length || cloud.items?.length || cloud.timeCosts?.length || cloud.groups?.length;
+        if (hasData) { S = cloud; return; }
+        // Cloud is empty — fall through to localStorage
+      } else if (res.status === 401) {
         authToken = null; authEmail = null;
         localStorage.removeItem('bijoux_token');
         localStorage.removeItem('bijoux_email');
@@ -925,7 +951,7 @@ function shuffleConfigColors(id) {
     if (nameEl) cfg.name = nameEl.value;
     cfg.chipSalt = uid();
     cfg.colorIdx = randomColorIdx();
-    saveState(); render();
+    syncLocal(); api('PUT', '/configs/' + id, configBody(cfg)); render();
   }
 }
 
@@ -935,13 +961,16 @@ function cycleConfigColor(id) {
     const nameEl = document.getElementById('cfg-name-' + id);
     if (nameEl) cfg.name = nameEl.value;
     cfg.colorIdx = ((cfg.colorIdx ?? 0) + 1) % BLOCK_COLORS.length;
-    saveState(); render();
+    syncLocal(); api('PUT', '/configs/' + id, configBody(cfg)); render();
   }
 }
 
 function cycleGroupColor(id) {
   const grp = S.groups.find(g => g.id === id);
-  if (grp) { grp.colorIdx = ((grp.colorIdx ?? 1) + 1) % BLOCK_COLORS.length; saveState(); render(); }
+  if (grp) {
+    grp.colorIdx = ((grp.colorIdx ?? 1) + 1) % BLOCK_COLORS.length;
+    syncLocal(); api('PUT', '/groups/' + id, groupBody(grp)); render();
+  }
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -1023,7 +1052,10 @@ function buildTimeChip(tc) {
 
 function cycleTimeCostColor(id) {
   const tc = S.timeCosts.find(t => t.id === id);
-  if (tc) { tc.colorIdx = ((tc.colorIdx ?? 2) + 1) % BLOCK_COLORS.length; saveState(); render(); }
+  if (tc) {
+    tc.colorIdx = ((tc.colorIdx ?? 2) + 1) % BLOCK_COLORS.length;
+    syncLocal(); api('PUT', '/time-costs/' + id, timeCostBody(tc)); render();
+  }
 }
 
 function startChipDrag(e, tcId, el) {
@@ -1519,8 +1551,11 @@ document.addEventListener('mouseup', (e) => {
         }
       });
       const tc = S.timeCosts.find(t => t.id === activeChipDrag.tcId);
-      if (tc) tc.configId = droppedConfigId;
-      saveState(); render();
+      if (tc) {
+        tc.configId = droppedConfigId || null;
+        syncLocal(); api('PUT', '/time-costs/' + tc.id, timeCostBody(tc));
+      }
+      render();
     }
     activeChipDrag = null;
     return;
@@ -1532,6 +1567,7 @@ document.addEventListener('mouseup', (e) => {
     const y = parseFloat(activeDrag.el.style.top)  || 0;
 
     if (dragMoved) {
+      let syncItem = null, syncGroup = null;
       if (activeDrag.type === 'item') {
         const item = S.items.find(i => i.id === activeDrag.id);
         if (item) {
@@ -1548,15 +1584,18 @@ document.addEventListener('mouseup', (e) => {
               const grp = S.groups.find(g => g.id === overlappingId);
               item.rx = Math.max(4, x - (grp ? grp.x || 0 : 0));
               item.ry = Math.max(38, y - (grp ? grp.y || 0 : 0));
+              syncItem = item;
             } else if (overlappingId) {
               const grp = S.groups.find(g => g.id === overlappingId);
               item.groupId = overlappingId;
               item.rx = Math.max(4, x - (grp ? grp.x || 0 : 0));
               item.ry = Math.max(38, y - (grp ? grp.y || 0 : 0));
+              syncItem = item;
             } else if (dist >= ESCAPE_THRESHOLD) {
               item.groupId = null;
               item.rx = undefined; item.ry = undefined;
               item.x = x; item.y = y;
+              syncItem = item;
             } else {
               activeDrag.el.remove();
               activeDrag.originalEl.style.opacity = '';
@@ -1570,15 +1609,18 @@ document.addEventListener('mouseup', (e) => {
             } else {
               item.x = x; item.y = y;
             }
+            syncItem = item;
           }
         }
       } else {
         const grp = S.groups.find(g => g.id === activeDrag.id);
-        if (grp) { grp.x = x; grp.y = y; }
+        if (grp) { grp.x = x; grp.y = y; syncGroup = grp; }
       }
       activeDrag.el.classList.remove('dragging');
       activeDrag = null;
-      saveState();
+      syncLocal();
+      if (syncItem) api('PATCH', '/items/' + syncItem.id + '/position', itemPosBody(syncItem));
+      if (syncGroup) api('PUT', '/groups/' + syncGroup.id, groupBody(syncGroup));
       render();
     } else {
       // No movement — clean up ghost if any, let click event handle expand toggle
@@ -1593,15 +1635,18 @@ document.addEventListener('mouseup', (e) => {
   if (activeResize) {
     const w = parseFloat(activeResize.el.style.width);
     const h = parseFloat(activeResize.el.style.height);
+    let syncItem = null, syncGroup = null;
     if (activeResize.type === 'group') {
       const grp = S.groups.find(g => g.id === activeResize.id);
-      if (grp) { grp.width = w; grp.height = h; reflowGroupMembers(grp); }
+      if (grp) { grp.width = w; grp.height = h; reflowGroupMembers(grp); syncGroup = grp; }
     } else {
       const item = S.items.find(i => i.id === activeResize.id);
-      if (item) { item.width = w; item.height = h; }
+      if (item) { item.width = w; item.height = h; syncItem = item; }
     }
     activeResize = null;
-    saveState();
+    syncLocal();
+    if (syncItem) api('PATCH', '/items/' + syncItem.id + '/position', itemPosBody(syncItem));
+    if (syncGroup) api('PUT', '/groups/' + syncGroup.id, groupBody(syncGroup));
   }
 });
 
@@ -1615,24 +1660,31 @@ function submitNewGroup() {
   const name = document.getElementById('new-group-name').value.trim();
   if (!name) return;
   const idx = S.groups.length;
-  S.groups.push({ id: uid(), name, x: 20 + idx * 30, y: 20 + idx * 30, width: 240, height: 180, colorIdx: randomColorIdx() });
-  saveState();
+  const grp = { id: uid(), name, x: 20 + idx * 30, y: 20 + idx * 30, width: 240, height: 180, colorIdx: randomColorIdx() };
+  S.groups.push(grp);
+  syncLocal();
+  api('POST', '/groups', { id: grp.id, ...groupBody(grp) });
   closeModal('new-group-modal');
   render();
 }
 
 function deleteGroup(id) {
   const grp = S.groups.find(g => g.id === id);
+  const freedItems = S.items.filter(i => i.groupId === id);
   S.items.forEach(item => {
     if (item.groupId === id) {
       item.groupId = null;
-      // Place freed items near where the group was
-      item.x = (grp ? grp.x || 20 : 20);
-      item.y = (grp ? grp.y || 20 : 20);
+      item.x = (grp ? grp.x || 20 : 20) + (item.rx || 0);
+      item.y = (grp ? grp.y || 20 : 20) + (item.ry || 0);
+      item.rx = undefined; item.ry = undefined;
     }
   });
   S.groups = S.groups.filter(g => g.id !== id);
-  saveState(); render();
+  syncLocal();
+  api('DELETE', '/groups/' + id);
+  // DB cascade sets group_id=NULL; we still need to update freed items' positions
+  freedItems.forEach(item => api('PATCH', '/items/' + item.id + '/position', itemPosBody(item)));
+  render();
 }
 
 // ── Config actions ────────────────────────────────────────────────────────────
@@ -1644,19 +1696,19 @@ function saveConfig(id) {
   if (input) cfg.name = input.value.trim();
   if (!cfg.name) { alert('Please give the configuration a name.'); return; }
   cfg.locked = true;
-  saveState(); render();
+  syncLocal(); api('PUT', '/configs/' + id, configBody(cfg)); render();
 }
 
 function unlockConfig(id) {
   const cfg = S.configs.find(c => c.id === id);
-  if (cfg) { cfg.locked = false; saveState(); render(); }
+  if (cfg) { cfg.locked = false; syncLocal(); api('PUT', '/configs/' + id, configBody(cfg)); render(); }
 }
 
 function deleteConfig(id) {
   const used = S.items.some(i => i.configId === id);
   if (used && !confirm('This configuration is used by existing items. Delete anyway?')) return;
   S.configs = S.configs.filter(c => c.id !== id);
-  saveState(); render();
+  syncLocal(); api('DELETE', '/configs/' + id); render();
 }
 
 function toggleAddSupplyForm(configId) {
@@ -1693,8 +1745,9 @@ function submitSupply(configId) {
   const cfg = S.configs.find(c => c.id === configId);
   const nameEl = document.getElementById('cfg-name-' + configId);
   if (nameEl) cfg.name = nameEl.value;
-  cfg.supplies.push({ id: uid(), name, cost, quantity: qty, unit });
-  saveState(); render();
+  const sup = { id: uid(), name, cost, quantity: qty, unit };
+  cfg.supplies.push(sup);
+  syncLocal(); api('POST', '/configs/' + configId + '/supplies', sup); render();
 }
 
 function deleteSupply(configId, supplyId) {
@@ -1703,7 +1756,7 @@ function deleteSupply(configId, supplyId) {
     const nameEl = document.getElementById('cfg-name-' + configId);
     if (nameEl) cfg.name = nameEl.value;
     cfg.supplies = cfg.supplies.filter(s => s.id !== supplyId);
-    saveState(); render();
+    syncLocal(); api('DELETE', '/supplies/' + supplyId); render();
   }
 }
 
@@ -2002,6 +2055,14 @@ function saveItem() {
           item.groupId = null;
         }
       }
+      syncLocal();
+      api('PUT', '/items/' + item.id, {
+        name: item.name, configId: item.configId, usages: item.usages,
+        timeCostId: item.timeCostId, timeAmount: item.timeAmount, timeUnit: item.timeUnit,
+        price: item.price, groupId: item.groupId ?? null,
+        x: item.x ?? null, y: item.y ?? null, width: item.width ?? null, height: item.height ?? null,
+        rx: item.rx ?? null, ry: item.ry ?? null
+      });
     }
     closeItemModal();
   } else {
@@ -2017,10 +2078,17 @@ function saveItem() {
       newItem.y = 20 + Math.floor(idx / 5) * 155;
     }
     S.items.push(newItem);
+    syncLocal();
+    api('POST', '/items', {
+      id: newItem.id, name: newItem.name, configId: newItem.configId, usages: newItem.usages,
+      timeCostId: newItem.timeCostId, timeAmount: newItem.timeAmount, timeUnit: newItem.timeUnit,
+      price: newItem.price, groupId: newItem.groupId ?? null,
+      x: newItem.x ?? null, y: newItem.y ?? null,
+      rx: newItem.rx ?? null, ry: newItem.ry ?? null
+    });
     closeItemModal();
   }
 
-  saveState();
   render();
 }
 
@@ -2074,18 +2142,23 @@ function saveTimeCostModal() {
 
   if (_editingTimeCostId) {
     const tc = S.timeCosts.find(t => t.id === _editingTimeCostId);
-    if (tc) Object.assign(tc, { name, duration, durationUnit: unit, rate });
+    if (tc) {
+      Object.assign(tc, { name, duration, durationUnit: unit, rate });
+      syncLocal(); api('PUT', '/time-costs/' + tc.id, timeCostBody(tc));
+    }
   } else {
-    S.timeCosts.push({ id: uid(), name, duration, durationUnit: unit, rate, configId: null, colorIdx: randomColorIdx() });
+    const tc = { id: uid(), name, duration, durationUnit: unit, rate, configId: null, colorIdx: randomColorIdx() };
+    S.timeCosts.push(tc);
+    syncLocal(); api('POST', '/time-costs', { id: tc.id, ...timeCostBody(tc) });
   }
   _editingTimeCostId = null;
-  saveState(); closeModal('time-modal'); render();
+  closeModal('time-modal'); render();
 }
 
 function deleteTimeCost(id) {
   S.items.forEach(item => { if (item.timeCostId === id) item.timeCostId = null; });
   S.timeCosts = S.timeCosts.filter(t => t.id !== id);
-  saveState(); render();
+  syncLocal(); api('DELETE', '/time-costs/' + id); render();
 }
 
 
@@ -2123,16 +2196,22 @@ function saveGroup() {
   const existingId = document.getElementById('grp-select')?.value;
 
   if (newName) {
-    const grp = { id: uid(), name: newName, x: 20, y: 20, width: 240, height: 180 };
+    const grp = { id: uid(), name: newName, x: 20, y: 20, width: 240, height: 180, colorIdx: randomColorIdx() };
     S.groups.push(grp);
     item.groupId = grp.id;
     item.rx = 10; item.ry = 44;
+    item.x = undefined; item.y = undefined;
+    syncLocal();
+    api('POST', '/groups', { id: grp.id, ...groupBody(grp) });
+    api('PATCH', '/items/' + item.id + '/position', itemPosBody(item));
   } else if (existingId) {
-    const grp = S.groups.find(g => g.id === existingId);
     const existing = S.items.filter(i => i.groupId === existingId);
     item.groupId = existingId;
     item.rx = 10 + (existing.length % 2) * 155;
     item.ry = 44 + Math.floor(existing.length / 2) * 100;
+    item.x = undefined; item.y = undefined;
+    syncLocal();
+    api('PATCH', '/items/' + item.id + '/position', itemPosBody(item));
   } else {
     // Removing from group — restore to absolute position near the group
     const oldGrp = S.groups.find(g => g.id === item.groupId);
@@ -2140,9 +2219,10 @@ function saveGroup() {
     item.y = (oldGrp ? oldGrp.y || 20 : 20) + (item.ry || 0);
     item.rx = undefined; item.ry = undefined;
     item.groupId = null;
+    syncLocal();
+    api('PATCH', '/items/' + item.id + '/position', itemPosBody(item));
   }
 
-  saveState();
   closeModal('group-modal');
   render();
 }
@@ -2170,7 +2250,7 @@ function mkBtn(text, cls, onclick) {
 
 function deleteItem(id) {
   S.items = S.items.filter(i => i.id !== id);
-  saveState(); render();
+  syncLocal(); api('DELETE', '/items/' + id); render();
 }
 
 // ── Help ──────────────────────────────────────────────────────────────────────
@@ -2186,6 +2266,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 function confirmReset() {
   localStorage.removeItem('bijoux_v1');
   S = { configs: [], items: [], groups: [], timeCosts: [] };
+  api('DELETE', '/state');
   closeModal('reset-modal');
   render();
 }
@@ -2193,8 +2274,11 @@ function confirmReset() {
 // ── Wire up buttons ───────────────────────────────────────────────────────────
 
 document.getElementById('btn-new-config').addEventListener('click', () => {
-  S.configs.push({ id: uid(), name: '', supplies: [], locked: false, colorIdx: randomColorIdx() });
-  saveState(); render();
+  const cfg = { id: uid(), name: '', supplies: [], locked: false, colorIdx: randomColorIdx() };
+  S.configs.push(cfg);
+  syncLocal();
+  api('POST', '/configs', { id: cfg.id, name: cfg.name, locked: cfg.locked, colorIdx: cfg.colorIdx ?? null, chipSalt: null });
+  render();
   setTimeout(() => {
     const inputs = document.querySelectorAll('[id^="cfg-name-"]');
     if (inputs.length) inputs[inputs.length - 1].focus();
@@ -2268,11 +2352,12 @@ async function submitAuth(mode) {
       const stateRes = await fetch('/api/state', { headers: { 'Authorization': 'Bearer ' + authToken } });
       if (stateRes.ok) {
         const cloud = await stateRes.json();
-        const hasData = cloud.configs?.length || cloud.items?.length || cloud.timeCosts?.length;
-        if (hasData) { S = cloud; if (!S.timeCosts) S.timeCosts = []; }
+        if (!cloud.timeCosts) cloud.timeCosts = [];
+        const hasData = cloud.configs?.length || cloud.items?.length || cloud.timeCosts?.length || cloud.groups?.length;
+        if (hasData) { S = cloud; }
       }
     }
-    saveState();
+    syncLocal();
     updateProfileBtn();
     closeModal('auth-modal');
     render();
